@@ -29,7 +29,7 @@ import {
 } from "./security";
 import { getTelegramData, pushTgLog, updateTelegramData } from "./store";
 import type { BotProductType, LinkCategory, TelegramBotData } from "./types";
-import { TELEGRAM_BOT_COMMANDS } from "./commands-catalog";
+import { TELEGRAM_ADMIN_COMMANDS, TELEGRAM_USER_COMMANDS } from "./commands-catalog";
 
 type TgUser = { id: number; username?: string; first_name?: string; is_bot?: boolean };
 
@@ -164,9 +164,96 @@ async function announceProfileChanges(
   }
 }
 
-function forceAddCount(member: { inviteAddsByChat?: Record<string, number> } | undefined, chatId: string) {
-  return member?.inviteAddsByChat?.[chatId] || 0;
+function userMenuKeyboard(data: TelegramBotData, isAdmin: boolean) {
+  const rows: { text: string; url?: string; callback_data?: string }[][] = [
+    [
+      { text: "🛒 Shop", callback_data: "menu:shop" },
+      { text: "⭐ VIP", callback_data: "menu:vip" },
+    ],
+    [
+      { text: "📘 Method", callback_data: "menu:method" },
+      { text: "🛠 Tools", callback_data: "menu:tools" },
+    ],
+    [
+      { text: "🚀 Boost", callback_data: "menu:boost" },
+      { text: "✦ AI Status", callback_data: "menu:aistatus" },
+    ],
+    [
+      {
+        text: "🛒 Official Sell Bot",
+        url: `https://t.me/${data.config.salesBotUsername.replace("@", "")}`,
+      },
+    ],
+    [{ text: "👤 Contact Admin", url: data.config.supportUrl }],
+  ];
+  if (isAdmin) {
+    rows.push([{ text: "⚙️ Admin Panel", callback_data: "menu:admin" }]);
+  }
+  return kb(rows);
 }
+
+function userHelpText(data: TelegramBotData, lang: string) {
+  if (lang === "bn") {
+    return (
+      `🤖 ${data.ai.personaName}\n\n` +
+      `📌 ইউজার মেনু:\n` +
+      `/shop · /vip · /course · /tools\n` +
+      `/method · /shortner · /card · /sites\n` +
+      `/boost — ফ্রি গ্রুপ\n` +
+      `/aistatus — AI স্ট্যাটাস\n` +
+      `/forceaddstatus — অ্যাড কাউন্ট\n` +
+      `/rules · /id · /help\n\n` +
+      `💬 লিখুন: facebook id, vpn, দাম…\n` +
+      `🛒 সেলার: https://t.me/${data.config.salesBotUsername.replace("@", "")}`
+    );
+  }
+  return (
+    `🤖 ${data.ai.personaName}\n\n` +
+    `📌 User menu:\n` +
+    `/shop · /vip · /course · /tools\n` +
+    `/method · /shortner · /card · /sites\n` +
+    `/boost — free group\n` +
+    `/aistatus — AI status\n` +
+    `/forceaddstatus — add count\n` +
+    `/rules · /id · /help\n\n` +
+    `💬 Try: facebook id, vpn, price…\n` +
+    `🛒 Seller: https://t.me/${data.config.salesBotUsername.replace("@", "")}`
+  );
+}
+
+function adminHelpText(lang: string) {
+  if (lang === "bn") {
+    return (
+      `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
+      `মডারেশন:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
+      `সিকিউরিটি:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
+      `ইউজার মেনুতে ফিরতে: /start`
+    );
+  }
+  return (
+    `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
+    `Moderation:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
+    `Security:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
+    `Back to user menu: /start`
+  );
+}
+
+async function syncBotCommandMenus(token: string, adminIds: string[]) {
+  await tgApi(token, "setMyCommands", {
+    commands: TELEGRAM_USER_COMMANDS,
+    scope: { type: "default" },
+  });
+  const adminMenu = [...TELEGRAM_USER_COMMANDS, ...TELEGRAM_ADMIN_COMMANDS];
+  for (const id of adminIds) {
+    const chatId = Number(id);
+    if (!Number.isFinite(chatId)) continue;
+    await tgApi(token, "setMyCommands", {
+      commands: adminMenu,
+      scope: { type: "chat", chat_id: chatId },
+    });
+  }
+}
+
 
 async function sendStoreCatalog(
   token: string,
@@ -576,6 +663,57 @@ export async function processTelegramUpdate(update: TgUpdate) {
       await sendLinkCategory(token, chatId, data, "method", "📘 Methods");
       return { ok: true };
     }
+    if (payload === "menu:admin" && chatId) {
+      if (!isBotAdmin(String(cb.from.id), data)) {
+        await tgApi(token, "sendMessage", {
+          chat_id: chatId,
+          text: "⛔ Admin only.",
+        });
+        return { ok: true };
+      }
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: adminHelpText(data.config.defaultLang),
+        reply_markup: kb([
+          [{ text: "🔙 User menu", callback_data: "menu:usermenu" }],
+          [
+            { text: "Force-add status", callback_data: "menu:forceaddinfo" },
+            { text: "Locks", callback_data: "menu:locksinfo" },
+          ],
+        ]),
+      });
+      return { ok: true };
+    }
+    if (payload === "menu:usermenu" && chatId) {
+      const isAdm = isBotAdmin(String(cb.from.id), data);
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: `${data.premium.premiumBadge}\n${userHelpText(data, data.config.defaultLang)}`,
+        reply_markup: userMenuKeyboard(data, isAdm),
+      });
+      return { ok: true };
+    }
+    if (payload === "menu:forceaddinfo" && chatId) {
+      if (!isBotAdmin(String(cb.from.id), data)) return { ok: true };
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(
+          `Force-add: ${data.booster.forceAddEnabled ? "ON" : "OFF"}\nRequired: ${data.booster.forceAddRequired}\n\nSet: /forceadd 5 · /forceadd on|off`,
+        ),
+      });
+      return { ok: true };
+    }
+    if (payload === "menu:locksinfo" && chatId) {
+      if (!isBotAdmin(String(cb.from.id), data)) return { ok: true };
+      const lines = Object.entries(data.security.locks)
+        .map(([k, v]) => `${v ? "🔒" : "🔓"} ${k}`)
+        .join("\n");
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(`Locks:\n${lines}`),
+      });
+      return { ok: true };
+    }
 
     if (payload.startsWith("buy:")) {
       const [, productId, gateway] = payload.split(":");
@@ -776,6 +914,39 @@ export async function processTelegramUpdate(update: TgUpdate) {
   const parts = text.split(/\s+/);
   const cmd = parts[0]?.toLowerCase().split("@")[0] || "";
   const args = parts.slice(1);
+
+  const ADMIN_ONLY_CMDS = new Set([
+    "/admin",
+    "/ban",
+    "/tban",
+    "/kick",
+    "/mute",
+    "/tmute",
+    "/unban",
+    "/unmute",
+    "/warn",
+    "/warns",
+    "/resetwarn",
+    "/rmwarn",
+    "/lock",
+    "/unlock",
+    "/locks",
+    "/flood",
+    "/forceadd",
+    "/namewatch",
+    "/night",
+    "/setcommands",
+    "/purge",
+    "/save",
+    "/approve",
+  ]);
+  if (cmd && ADMIN_ONLY_CMDS.has(cmd) && !admin) {
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: fresh.config.defaultLang === "bn" ? "⛔ এই কমান্ড শুধু Admin এর জন্য।" : "⛔ This command is for admins only.",
+    });
+    return { ok: true };
+  }
 
   // Admin rose commands (same as before — condensed handlers)
   if (admin && cmd) {
@@ -1036,10 +1207,10 @@ export async function processTelegramUpdate(update: TgUpdate) {
       return { ok: true };
     }
     if (cmd === "/setcommands") {
-      const res = await tgApi(token, "setMyCommands", { commands: TELEGRAM_BOT_COMMANDS });
+      await syncBotCommandMenus(token, fresh.config.adminIds);
       await tgApi(token, "sendMessage", {
         chat_id: chatId,
-        text: securityMsg(res.ok ? "Bot command menu updated ✅" : `Failed: ${res.description}`),
+        text: securityMsg("Bot command menus synced ✅\nUsers → user cmds\nAdmins (private) → + admin cmds"),
       });
       return { ok: true };
     }
@@ -1047,44 +1218,36 @@ export async function processTelegramUpdate(update: TgUpdate) {
 
   // Public commands
   if (cmd === "/start" || cmd === "/help") {
-    if (fresh.booster.enabled && fresh.booster.autoSendInviteOnStart) {
-      // invite after welcome
-    }
-    const helpAdmin = admin
-      ? `\n\n🛡 Admin: /ban /mute /warn /lock /forceadd /namewatch /setcommands /night`
-      : "";
     await tgApi(token, "sendMessage", {
       chat_id: chatId,
-      text:
-        `${fresh.premium.premiumBadge}\n` +
-        (fresh.config.defaultLang === "bn"
-          ? `🤖 ${fresh.ai.personaName}\n🛡 Basictrick Security Assistant\n\n/shop /vip /course /tools\n/method /shortner /card /sites\n/boost — ফ্রি গ্রুপ\n/aistatus — AI\n/forceaddstatus — অ্যাড কাউন্ট\n/rules /id\n\nস্মার্ট: facebook id, vpn, দাম…`
-          : `🤖 ${fresh.ai.personaName}\n🛡 Basictrick Security Assistant\n\n/shop /vip /course /tools\n/method /shortner /card /sites\n/boost — free group\n/aistatus — AI\n/forceaddstatus — add count\n/rules /id`) +
-        helpAdmin,
-      reply_markup: kb([
-        [
-          { text: "🛒 Shop", callback_data: "menu:shop" },
-          { text: "⭐ VIP", callback_data: "menu:vip" },
-        ],
-        [
-          { text: "📘 Method", callback_data: "menu:method" },
-          { text: "🛠 Tools", callback_data: "menu:tools" },
-        ],
-        [
-          { text: "🚀 Boost", callback_data: "menu:boost" },
-          { text: "✦ AI Status", callback_data: "menu:aistatus" },
-        ],
-        [
-          {
-            text: "Official Sell Bot",
-            url: `https://t.me/${fresh.config.salesBotUsername.replace("@", "")}`,
-          },
-        ],
-      ]),
+      text: `${fresh.premium.premiumBadge}\n${userHelpText(fresh, fresh.config.defaultLang)}`,
+      reply_markup: userMenuKeyboard(fresh, admin),
     });
     if (fresh.booster.enabled && fresh.booster.autoSendInviteOnStart) {
       await sendBoostInvite(token, chatId, fresh, userId);
     }
+    return { ok: true };
+  }
+
+  if (cmd === "/admin") {
+    if (!admin) {
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: fresh.config.defaultLang === "bn" ? "⛔ শুধু Admin।" : "⛔ Admins only.",
+      });
+      return { ok: true };
+    }
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: adminHelpText(fresh.config.defaultLang),
+      reply_markup: kb([
+        [{ text: "🔙 User menu", callback_data: "menu:usermenu" }],
+        [
+          { text: "Force-add status", callback_data: "menu:forceaddinfo" },
+          { text: "Locks", callback_data: "menu:locksinfo" },
+        ],
+      ]),
+    });
     return { ok: true };
   }
 
@@ -1266,7 +1429,7 @@ export async function setTelegramWebhook(publicUrl: string) {
   if (!res.ok) {
     throw new Error(res.description || "setWebhook failed");
   }
-  await tgApi(token, "setMyCommands", { commands: TELEGRAM_BOT_COMMANDS });
+  await syncBotCommandMenus(token, data.config.adminIds);
   const info = await tgApi(token, "getWebhookInfo", {});
   await pushTgLog("info", `Webhook set → ${url}`);
   return { url, result: res, webhookInfo: info };

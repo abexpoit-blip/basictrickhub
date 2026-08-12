@@ -7,10 +7,10 @@ export type CommandDoc = {
   adminOnly?: boolean;
 };
 
-/** Telegram setMyCommands payload (max 100, description ≤ 256 chars) */
-export const TELEGRAM_BOT_COMMANDS: { command: string; description: string }[] = [
+/** Telegram setMyCommands — normal users only (no admin cmds) */
+export const TELEGRAM_USER_COMMANDS: { command: string; description: string }[] = [
   { command: "start", description: "Start / main menu" },
-  { command: "help", description: "All commands help" },
+  { command: "help", description: "User help" },
   { command: "shop", description: "Store catalog" },
   { command: "vip", description: "VIP packs" },
   { command: "course", description: "Paid courses" },
@@ -21,10 +21,22 @@ export const TELEGRAM_BOT_COMMANDS: { command: string; description: string }[] =
   { command: "sites", description: "Site list links" },
   { command: "boost", description: "Free / AI group invite" },
   { command: "aistatus", description: "AI unlock status" },
-  { command: "forceaddstatus", description: "Your force-add count" },
+  { command: "forceaddstatus", description: "Your add count" },
   { command: "rules", description: "Group rules" },
   { command: "id", description: "Your Telegram ID" },
 ];
+
+/** Extra commands shown only in admin private chat scopes */
+export const TELEGRAM_ADMIN_COMMANDS: { command: string; description: string }[] = [
+  { command: "admin", description: "Admin control panel" },
+  { command: "forceadd", description: "Force-add on|off|N" },
+  { command: "namewatch", description: "Name watch on|off" },
+  { command: "locks", description: "Show locks" },
+  { command: "setcommands", description: "Sync bot command menus" },
+];
+
+/** @deprecated use TELEGRAM_USER_COMMANDS */
+export const TELEGRAM_BOT_COMMANDS = TELEGRAM_USER_COMMANDS;
 
 export const BOT_COMMAND_DOCS: CommandDoc[] = [
   {
@@ -122,11 +134,19 @@ export const BOT_COMMAND_DOCS: CommandDoc[] = [
     adminOnly: true,
   },
   {
+    command: "/admin",
+    category: "Admin",
+    descriptionBn: "Admin প্যানেল (শুধু admin ID)",
+    descriptionEn: "Admin panel (admin IDs only)",
+    exampleResponse: "⚙️ Admin Panel — moderation + security cmds",
+    adminOnly: true,
+  },
+  {
     command: "/setcommands",
     category: "Admin",
     descriptionBn: "বট মেনু কমান্ড সিঙ্ক",
     descriptionEn: "Sync bot command menu",
-    exampleResponse: "Bot command menu updated ✅",
+    exampleResponse: "Users → user cmds · Admins → + admin cmds",
     adminOnly: true,
   },
   {
