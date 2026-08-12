@@ -46,15 +46,29 @@ export function hasInviteLink(text: string) {
   return /t\.me\/\+|t\.me\/joinchat\/|telegram\.me\/joinchat\//i.test(text);
 }
 
-export function isAllowlistedUrl(text: string, domains: string[]) {
-  if (!domains.length) return false;
+/** Allowlist entries can be domains (`basictrickhub.com`) or full paths (`t.me/basictrick`). */
+export function isAllowlistedUrl(text: string, allowlist: string[]) {
+  if (!allowlist.length) return false;
   try {
-    const urls = text.match(/https?:\/\/[^\s]+|t\.me\/[^\s]+/gi) || [];
+    const urls = text.match(/https?:\/\/[^\s<>"']+|t\.me\/[^\s<>"']+/gi) || [];
     if (!urls.length) return false;
     return urls.every((u) => {
-      const normalized = u.startsWith("http") ? u : `https://${u}`;
-      const host = new URL(normalized).hostname.replace(/^www\./, "");
-      return domains.some((d) => host === d || host.endsWith(`.${d}`) || u.includes(d));
+      const normalized = (u.startsWith("http") ? u : `https://${u}`).toLowerCase();
+      const bare = normalized.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      let host = "";
+      try {
+        host = new URL(normalized).hostname.replace(/^www\./, "");
+      } catch {
+        return false;
+      }
+      return allowlist.some((entry) => {
+        const e = entry.toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+        if (!e) return false;
+        if (e.includes("/")) {
+          return bare === e || bare.startsWith(`${e}/`) || bare.includes(e);
+        }
+        return host === e || host.endsWith(`.${e}`);
+      });
     });
   } catch {
     return false;

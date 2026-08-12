@@ -571,7 +571,15 @@ function ConnectPanel({
               try {
                 const st = await tgAdminBotStatus({ data: { password } });
                 setStatusJson(JSON.stringify(st, null, 2));
-                onMsg("getMe OK");
+                const whUrl =
+                  st && typeof st === "object" && "webhook" in st
+                    ? ((st as { webhook?: { result?: { url?: string } } }).webhook?.result?.url ?? "")
+                    : "";
+                if (!whUrl) {
+                  onMsg("getMe OK — but webhook is EMPTY. Click green Set Webhook");
+                } else {
+                  onMsg(`getMe OK · webhook active`);
+                }
               } catch (e) {
                 onErr(e instanceof Error ? e.message : "fail");
               } finally {
@@ -590,7 +598,15 @@ function ConnectPanel({
                 await tgAdminSaveConfig({ data: { password, config: cfg } });
                 const res = await tgAdminSetWebhook({ data: { password, publicUrl: cfg.sitePublicUrl } });
                 setStatusJson(JSON.stringify(res, null, 2));
-                onMsg(`Webhook: ${res.url}`);
+                const live =
+                  res && typeof res === "object" && "webhookInfo" in res
+                    ? ((res as { webhookInfo?: { result?: { url?: string } } }).webhookInfo?.result?.url ?? "")
+                    : "";
+                if (!live) {
+                  onErr("Set Webhook ran but Telegram still has empty URL — check token / HTTPS");
+                } else {
+                  onMsg(`Webhook ACTIVE: ${live}`);
+                }
                 onSaved(await tgAdminGet({ data: { password } }));
               } catch (e) {
                 onErr(e instanceof Error ? e.message : "Webhook needs HTTPS");

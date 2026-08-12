@@ -248,6 +248,7 @@ export interface TgBotConfig {
 }
 
 export interface TelegramBotData {
+  schemaVersion?: number;
   config: TgBotConfig;
   security: TgSecurityConfig;
   booster: TgBoosterConfig;
@@ -262,6 +263,9 @@ export interface TelegramBotData {
   posts: TgGroupPost[];
   logs: { id: string; at: string; level: string; message: string }[];
 }
+
+/** Bump to force-apply community defaults (keywords, locks, free group) on existing VPS data. */
+export const TELEGRAM_SCHEMA_VERSION = 2;
 
 export const DEFAULT_LOCKS: TgLocks = {
   url: false,
@@ -294,11 +298,22 @@ export function defaultSecurity(): TgSecurityConfig {
     floodMode: "tmute",
     floodMuteMinutes: 10,
     clearFlood: false,
-    locks: { ...DEFAULT_LOCKS },
-    blockLinks: false,
-    blockForwards: false,
+    locks: {
+      ...DEFAULT_LOCKS,
+      url: true,
+      invitelink: true,
+      forward: true,
+    },
+    blockLinks: true,
+    blockForwards: true,
     blockInvitelinks: true,
-    allowlistedDomains: ["t.me", "basictrick.com", "localhost"],
+    allowlistedDomains: [
+      "t.me/basictrick",
+      "t.me/btidsellerbot",
+      "t.me/basictrickadmin",
+      "basictrickhub.com",
+      "basictrick.com",
+    ],
     captchaOnJoin: true,
     captchaKickMinutes: 5,
     captchaMuteUntilPass: true,
@@ -314,14 +329,14 @@ export function defaultSecurity(): TgSecurityConfig {
     blacklistMode: "warn",
     welcomeEnabled: true,
     welcomeMessageBn:
-      "স্বাগতম {name}! Basictrick কমিউনিটিতে। /shop দিয়ে টুলস কিনুন, /vip দিয়ে VIP নিন।\nরুলস: /rules\nসাপোর্ট: {support}",
+      "স্বাগতম {name}! 👋\nBasictrick অফিসিয়াল কমিউনিটিতে আপনাকে স্বাগতম।\n\n✅ ID / VPN কিনতে অফিসিয়াল সেলার বট: https://t.me/btidsellerbot\n⚡ অটো পেমেন্ট · ইনস্ট্যান্ট ডেলিভারি\n👥 ফ্রি/AI গ্রুপ: https://t.me/basictrick\n🛡 অ্যাডমিন: https://t.me/Basictrickadmin\n\n📌 রুলস: লিংক/অন্য গ্রুপ শেয়ার নিষেধ · /rules",
     welcomeMessageEn:
-      "Welcome {name}! Use /shop for tools, /vip for VIP.\nRules: /rules\nSupport: {support}",
-    goodbyeEnabled: false,
-    goodbyeMessage: "👋 {name} left the chat.",
+      "Welcome {name}! 👋\nBuy ID/VPN from official seller: https://t.me/btidsellerbot\nFree/AI group: https://t.me/basictrick\nAdmin: https://t.me/Basictrickadmin\nNo link / other-group sharing. /rules",
+    goodbyeEnabled: true,
+    goodbyeMessage: "👋 {name} গ্রুপ ছেড়ে চলে গেছেন। আবার স্বাগতম — https://t.me/basictrick",
     cleanService: true,
     rulesText:
-      "1) No spam / flood\n2) No scam links\n3) Respect admins\n4) Buy only from official bots\n5) No NSFW",
+      "1) লিংক শেয়ার নিষেধ (অফিসিয়াল ছাড়া)\n2) অন্য গ্রুপ/চ্যানেল ইনভাইট শেয়ার নিষেধ\n3) স্প্যাম/ফ্লাড নিষেধ\n4) ID/VPN শুধু অফিসিয়াল বট থেকে: https://t.me/btidsellerbot\n5) AI ব্যবহার করতে ফ্রি গ্রুপে জয়েন: https://t.me/basictrick\n6) অ্যাডমিন: https://t.me/Basictrickadmin",
     reportEnabled: true,
     logChannelId: "",
     nightMode: false,
@@ -332,16 +347,16 @@ export function defaultSecurity(): TgSecurityConfig {
 export function defaultBooster(): TgBoosterConfig {
   return {
     enabled: true,
-    freeGroupId: "",
-    freeGroupInvite: "https://t.me/+YOUR_FREE_GROUP",
-    freeGroupTitle: "Basictrick Free Community",
+    freeGroupId: "@basictrick",
+    freeGroupInvite: "https://t.me/basictrick",
+    freeGroupTitle: "Basictrick Free / AI Community",
     requireJoinFreeGroup: true,
     autoSendInviteOnStart: true,
     autoSendInviteOnJoin: true,
     boostMessageBn:
-      "🚀 Group Booster\nআমাদের ফ্রি গ্রুপে জয়েন করুন — ডেইলি মেথড ও আপডেট পাবেন।\n\n👉 {invite}\nগ্রুপ: {group}",
+      "🚀 Basictrick ফ্রি/AI গ্রুপ\nAI ও কমিউনিটি আপডেট পেতে অবশ্যই জয়েন করুন:\n\n👉 {invite}\nগ্রুপ: {group}",
     boostMessageEn:
-      "🚀 Group Booster\nJoin our free community for daily drops.\n\n👉 {invite}\nGroup: {group}",
+      "🚀 Join Basictrick Free/AI group to unlock community AI:\n\n👉 {invite}\nGroup: {group}",
     targetDailyJoins: 100,
     invitesSent: 0,
     joinsTracked: 0,
@@ -351,15 +366,15 @@ export function defaultBooster(): TgBoosterConfig {
 export function defaultPremium(): TgPremiumGate {
   return {
     enabled: true,
-    minGroupsToUnlockAi: 1,
+    minGroupsToUnlockAi: 0,
     requireFreeGroupJoin: true,
-    premiumBadge: "✦ PREMIUM AI",
+    premiumBadge: "✦ Basictrick AI",
     lockedMessageBn:
-      "✦ Premium AI লক করা\nAI বট ফুল পাওয়ার আনলক করতে:\n1️⃣ আমাদের ফ্রি গ্রুপে জয়েন করুন\n2️⃣ আপনার গ্রুপগুলোতে এই বট অ্যাড করুন (Admin)\n\nস্ট্যাটাস: /aistatus\nফ্রি গ্রুপ: {invite}",
+      "✦ AI লক করা আছে\nAI বট ব্যবহার করতে অবশ্যই আমাদের অফিসিয়াল গ্রুপে জয়েন করতে হবে:\n\n👉 {invite}\n\nজয়েন করার পর আবার মেসেজ দিন বা /aistatus চাপুন।\nঅ্যাডমিন: https://t.me/Basictrickadmin",
     lockedMessageEn:
-      "✦ Premium AI locked\nTo unlock full AI power:\n1) Join our free group\n2) Add this bot to your groups as Admin\n\nStatus: /aistatus\nFree group: {invite}",
-    unlockedMessageBn: "✦ Premium AI আনলকড! এখন স্মার্ট রিপ্লাই চালু। কিছু জিজ্ঞাসা করুন।",
-    unlockedMessageEn: "✦ Premium AI unlocked! Ask me anything about shop, VIP, IDs, methods.",
+      "✦ AI locked\nJoin our official group to use AI:\n\n👉 {invite}\n\nThen message again or /aistatus.\nAdmin: https://t.me/Basictrickadmin",
+    unlockedMessageBn: "✦ AI আনলকড! এখন জিজ্ঞাসা করুন — ID, VPN, VIP, Method।",
+    unlockedMessageEn: "✦ AI unlocked! Ask about ID, VPN, VIP, Method.",
   };
 }
 
@@ -416,9 +431,11 @@ export function defaultAiBrain(): TgAiBrain {
       {
         id: "intent-support",
         name: "Support",
-        patterns: ["support", "admin", "সাপোর্ট", "হেল্পলাইন", "contact"],
-        replyBn: "সাপোর্ট: {support}\nঅফিসিয়াল সেল বট: @{salesBot}",
-        replyEn: "Support: {support}\nOfficial sell bot: @{salesBot}",
+        patterns: ["support", "admin", "সাপোর্ট", "হেল্পলাইন", "contact", "যোগাযোগ", "কমিউনিটি অ্যাডমিন"],
+        replyBn:
+          "🛡 কমিউনিটি অ্যাডমিনের সাথে যোগাযোগ:\n👉 https://t.me/Basictrickadmin\n\nID/VPN কিনতে অফিসিয়াল সেলার:\n👉 https://t.me/btidsellerbot\n(অটো পেমেন্ট · ইনস্ট্যান্ট ডেলিভারি)\n\nAI গ্রুপ: https://t.me/basictrick",
+        replyEn:
+          "🛡 Community admin: https://t.me/Basictrickadmin\nOfficial ID/VPN seller: https://t.me/btidsellerbot\nAI group: https://t.me/basictrick",
         action: "support",
         isActive: true,
         priority: 14,
@@ -427,16 +444,111 @@ export function defaultAiBrain(): TgAiBrain {
   };
 }
 
+export function communityKeywordRules(): TgKeywordRule[] {
+  const sellerBn =
+    "🔥 Basictrick অফিসিয়াল বট থেকে ID / VPN কিনুন\n\n✅ অটোমেটিক পেমেন্ট সিস্টেম\n⚡ ইনস্ট্যান্ট ডেলিভারি\n🛡 অফিসিয়াল ও সেফ\n\n👉 সেলার বট: https://t.me/btidsellerbot\n\nঅ্যাডমিন সাপোর্ট: https://t.me/Basictrickadmin\nAI/কমিউনিটি গ্রুপ: https://t.me/basictrick";
+  const sellerEn =
+    "🔥 Buy ID / VPN from Basictrick official seller\n\n✅ Automatic payment\n⚡ Instant delivery\n\n👉 https://t.me/btidsellerbot\nAdmin: https://t.me/Basictrickadmin\nGroup: https://t.me/basictrick";
+  return [
+    {
+      id: "kw-id-vpn-seller",
+      keywords: [
+        "facebook id",
+        "fb id",
+        "ফেসবুক আইডি",
+        "ফেসবুক id",
+        "fb account",
+        "facebook account",
+        "আইডি কিনব",
+        "id kinbo",
+        "id chai",
+        "id lagbe",
+        "আইডি লাগবে",
+        "pc clone",
+        "pcclone",
+        "clone id",
+        "1000xxx",
+        "1000x",
+        "61xxx",
+        "61xx",
+        "vpn",
+        "nord",
+        "nordvpn",
+        "ip vanish",
+        "ipvanish",
+        "ip",
+        "id",
+        "আইডি",
+      ],
+      title: "ID / VPN → Official Seller",
+      replyBn: sellerBn,
+      replyEn: sellerEn,
+      suggestBotUsername: "btidsellerbot",
+      buttonText: "🛒 Official ID Seller Bot",
+      buttonUrl: "https://t.me/btidsellerbot",
+      isActive: true,
+      priority: 20,
+    },
+    {
+      id: "kw-bm",
+      keywords: ["business manager", "bm chai", "bm কিনব", "bm id", "বিএম"],
+      title: "BM Tools",
+      replyBn:
+        "BM লাগলে Tools/Method দেখুন অথবা অফিসিয়াল সেলার:\n👉 https://t.me/btidsellerbot\nওয়েব: {site}/tools",
+      replyEn:
+        "Need BM? Check tools or official seller:\n👉 https://t.me/btidsellerbot\nWeb: {site}/tools",
+      suggestBotUsername: "btidsellerbot",
+      buttonText: "Open Seller Bot",
+      buttonUrl: "https://t.me/btidsellerbot",
+      isActive: true,
+      priority: 8,
+    },
+    {
+      id: "kw-autopay",
+      keywords: ["autopay", "threshold", "অটোপে", "থ্রেশহোল্ড", "method"],
+      title: "Autopay Method",
+      replyBn:
+        "📘 Autopay Threshold মেথড: /course বা /vip\nওয়েব: {site}/method\nঅ্যাডমিন: https://t.me/Basictrickadmin",
+      replyEn:
+        "📘 Autopay methods: /course or /vip\nWeb: {site}/method\nAdmin: https://t.me/Basictrickadmin",
+      isActive: true,
+      priority: 7,
+    },
+    {
+      id: "kw-vip",
+      keywords: ["vip", "paid group", "প্রাইভেট গ্রুপ", "ভিআইপি"],
+      title: "VIP Access",
+      replyBn: "⭐ VIP এক্সেস: /vip · অ্যাডমিন: https://t.me/Basictrickadmin",
+      replyEn: "⭐ VIP: /vip · Admin: https://t.me/Basictrickadmin",
+      isActive: true,
+      priority: 9,
+    },
+    {
+      id: "kw-admin",
+      keywords: ["admin link", "অ্যাডমিন", "কমিউনিটি অ্যাডমিন", "admin chai"],
+      title: "Community Admin",
+      replyBn:
+        "🛡 কমিউনিটি অ্যাডমিন:\n👉 https://t.me/Basictrickadmin\n\nযেকোনো প্রশ্ন/হেল্প এখানে।",
+      replyEn: "🛡 Community admin: https://t.me/Basictrickadmin",
+      buttonText: "Open Admin",
+      buttonUrl: "https://t.me/Basictrickadmin",
+      isActive: true,
+      priority: 12,
+    },
+  ];
+}
+
 export function createTelegramSeed(): TelegramBotData {
   const now = new Date().toISOString();
   return {
+    schemaVersion: TELEGRAM_SCHEMA_VERSION,
     config: {
       botToken: "",
-      botUsername: "BasictrickBot",
+      botUsername: "basictrickbot",
       webhookSecret: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
       adminIds: ["5311644406", "7967023275"],
-      salesBotUsername: "BasictrickSellBot",
-      supportUrl: "https://t.me/basictrick",
+      salesBotUsername: "btidsellerbot",
+      supportUrl: "https://t.me/Basictrickadmin",
       defaultLang: "bn",
       zinipayApiKey: "",
       plisioApiKey: "",
@@ -451,80 +563,25 @@ export function createTelegramSeed(): TelegramBotData {
       {
         id: "note-rules",
         name: "rules",
-        content: "Community rules: /rules — Buy only from official bots.",
+        content:
+          "Community rules:\n1) No links / other group invites\n2) Buy ID/VPN only from https://t.me/btidsellerbot\n3) AI requires join https://t.me/basictrick\n4) Admin: https://t.me/Basictrickadmin",
         isActive: true,
       },
       {
         id: "note-shop",
         name: "shop",
-        content: "Open store with /shop — VIP /course /tools available.",
+        content:
+          "ID / VPN → https://t.me/btidsellerbot (auto pay · instant delivery)\nWeb shop: https://basictrickhub.com/shop",
         isActive: true,
       },
       {
         id: "note-support",
         name: "support",
-        content: "Support: https://t.me/basictrick",
+        content: "Admin: https://t.me/Basictrickadmin\nGroup: https://t.me/basictrick",
         isActive: true,
       },
     ],
-    keywords: [
-      {
-        id: "kw-fb-id",
-        keywords: [
-          "facebook id",
-          "fb id",
-          "ফেসবুক আইডি",
-          "ফেসবুক id",
-          "fb account",
-          "facebook account",
-          "আইডি কিনব",
-          "id kinbo",
-          "id chai",
-        ],
-        title: "Facebook ID Sales",
-        replyBn:
-          "🔥 Facebook ID লাগবে?\nআমাদের অফিসিয়াল সেল বট থেকে কিনুন — সেফ ও ফাস্ট ডেলিভারি।\n\n👉 @{salesBot}\n\nঅথবা ওয়েব শপ: {site}/shop",
-        replyEn:
-          "🔥 Need Facebook IDs?\nBuy from our official sales bot — safe & fast delivery.\n\n👉 @{salesBot}\n\nOr web shop: {site}/shop",
-        suggestBotUsername: "BasictrickSellBot",
-        buttonText: "Open Official Sell Bot",
-        buttonUrl: "",
-        isActive: true,
-        priority: 10,
-      },
-      {
-        id: "kw-bm",
-        keywords: ["business manager", "bm chai", "bm কিনব", "bm id", "বিএম"],
-        title: "BM Tools",
-        replyBn:
-          "BM লাগলে আমাদের Tools ও Method দেখুন।\n/shop · /tools\nঅফিসিয়াল বট: @{salesBot}",
-        replyEn:
-          "Need BM? Check Tools & Methods.\n/shop · /tools\nOfficial bot: @{salesBot}",
-        suggestBotUsername: "BasictrickSellBot",
-        isActive: true,
-        priority: 8,
-      },
-      {
-        id: "kw-autopay",
-        keywords: ["autopay", "threshold", "অটোপে", "থ্রেশহোল্ড", "method"],
-        title: "Autopay Method",
-        replyBn:
-          "📘 Autopay Threshold মেথড পেতে /course বা /vip ব্যবহার করুন।\nওয়েব: {site}/method",
-        replyEn:
-          "📘 For Autopay Threshold methods use /course or /vip.\nWeb: {site}/method",
-        isActive: true,
-        priority: 7,
-      },
-      {
-        id: "kw-vip",
-        keywords: ["vip", "paid group", "প্রাইভেট গ্রুপ", "ভিআইপি"],
-        title: "VIP Access",
-        replyBn: "⭐ VIP এক্সেস নিতে /vip চাপুন। পেমেন্ট ZiniPay / Plisio সাপোর্টেড।",
-        replyEn: "⭐ Get VIP with /vip. Payments via ZiniPay / Plisio.",
-        isActive: true,
-        priority: 9,
-      },
-    ],
+    keywords: communityKeywordRules(),
     products: [
       {
         id: "bot-prod-vip",
@@ -581,8 +638,22 @@ export function createTelegramSeed(): TelegramBotData {
 
 export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotData {
   const seed = createTelegramSeed();
-  const sec = { ...defaultSecurity(), ...(raw.security || {}) };
-  sec.locks = { ...DEFAULT_LOCKS, ...(raw.security?.locks || {}) };
+  const fromVersion = Number(raw.schemaVersion || 0);
+  const applyCommunityPack = fromVersion < TELEGRAM_SCHEMA_VERSION;
+
+  const sec = applyCommunityPack
+    ? { ...defaultSecurity(), ...(raw.security || {}), ...pickCommunitySecurity(raw.security) }
+    : { ...defaultSecurity(), ...(raw.security || {}) };
+  sec.locks = applyCommunityPack
+    ? {
+        ...DEFAULT_LOCKS,
+        ...(raw.security?.locks || {}),
+        url: true,
+        invitelink: true,
+        forward: true,
+      }
+    : { ...DEFAULT_LOCKS, ...(raw.security?.locks || {}) };
+
   const mergedConfig = { ...seed.config, ...(raw.config || {}) };
   if (!mergedConfig.adminIds?.length) {
     mergedConfig.adminIds = seed.config.adminIds;
@@ -590,20 +661,55 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
   if (!mergedConfig.sitePublicUrl?.trim()) {
     mergedConfig.sitePublicUrl = seed.config.sitePublicUrl;
   }
-  // Never invent a token from seed; keep disk value
   mergedConfig.botToken = raw.config?.botToken || "";
+  if (applyCommunityPack) {
+    mergedConfig.salesBotUsername = "btidsellerbot";
+    mergedConfig.supportUrl = "https://t.me/Basictrickadmin";
+    mergedConfig.botUsername = mergedConfig.botUsername || "basictrickbot";
+    mergedConfig.defaultLang = "bn";
+  }
+
+  const booster = applyCommunityPack
+    ? {
+        ...defaultBooster(),
+        ...(raw.booster || {}),
+        freeGroupId: "@basictrick",
+        freeGroupInvite: "https://t.me/basictrick",
+        freeGroupTitle: "Basictrick Free / AI Community",
+        requireJoinFreeGroup: true,
+        enabled: true,
+      }
+    : { ...defaultBooster(), ...(raw.booster || {}) };
+
+  const premium = applyCommunityPack
+    ? {
+        ...defaultPremium(),
+        ...(raw.premium || {}),
+        minGroupsToUnlockAi: 0,
+        requireFreeGroupJoin: true,
+        enabled: true,
+        lockedMessageBn: defaultPremium().lockedMessageBn,
+        lockedMessageEn: defaultPremium().lockedMessageEn,
+      }
+    : { ...defaultPremium(), ...(raw.premium || {}) };
+
   return {
+    schemaVersion: TELEGRAM_SCHEMA_VERSION,
     config: mergedConfig,
     security: sec,
-    booster: { ...defaultBooster(), ...(raw.booster || {}) },
-    premium: { ...defaultPremium(), ...(raw.premium || {}) },
+    booster,
+    premium,
     ai: {
       ...defaultAiBrain(),
       ...(raw.ai || {}),
-      intents: raw.ai?.intents?.length ? raw.ai.intents : seed.ai.intents,
+      intents: applyCommunityPack
+        ? defaultAiBrain().intents
+        : raw.ai?.intents?.length
+          ? raw.ai.intents
+          : seed.ai.intents,
     },
-    keywords: raw.keywords?.length ? raw.keywords : seed.keywords,
-    notes: raw.notes?.length ? raw.notes : seed.notes,
+    keywords: applyCommunityPack ? communityKeywordRules() : raw.keywords?.length ? raw.keywords : seed.keywords,
+    notes: applyCommunityPack ? seed.notes : raw.notes?.length ? raw.notes : seed.notes,
     products: raw.products?.length ? raw.products : seed.products,
     orders: raw.orders || [],
     members: (raw.members || []).map((m) => ({
@@ -613,8 +719,49 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
       warns: m.warns ?? 0,
       banned: m.banned ?? false,
     })),
-    managedGroups: raw.managedGroups || [],
+    managedGroups: applyCommunityPack
+      ? (() => {
+          const existing = raw.managedGroups || [];
+          const has = existing.some(
+            (g) => g.username === "basictrick" || g.inviteLink === "https://t.me/basictrick" || g.chatId === "@basictrick",
+          );
+          if (has) return existing;
+          return [
+            {
+              chatId: "@basictrick",
+              title: "Basictrick Free / AI Community",
+              type: "supergroup",
+              username: "basictrick",
+              inviteLink: "https://t.me/basictrick",
+              isActive: true,
+              pending: false,
+              createdAt: new Date().toISOString(),
+            },
+            ...existing,
+          ];
+        })()
+      : raw.managedGroups || [],
     posts: raw.posts || [],
     logs: raw.logs?.length ? raw.logs : seed.logs,
+  };
+}
+
+function pickCommunitySecurity(raw?: Partial<TgSecurityConfig>): Partial<TgSecurityConfig> {
+  const d = defaultSecurity();
+  return {
+    blockLinks: true,
+    blockForwards: true,
+    blockInvitelinks: true,
+    allowlistedDomains: d.allowlistedDomains,
+    welcomeEnabled: true,
+    welcomeMessageBn: d.welcomeMessageBn,
+    welcomeMessageEn: d.welcomeMessageEn,
+    goodbyeEnabled: true,
+    goodbyeMessage: d.goodbyeMessage,
+    rulesText: d.rulesText,
+    // keep operator-tuned values from disk when present
+    logChannelId: raw?.logChannelId ?? d.logChannelId,
+    floodMaxMessages: raw?.floodMaxMessages ?? d.floodMaxMessages,
+    maxWarns: raw?.maxWarns ?? d.maxWarns,
   };
 }

@@ -994,14 +994,21 @@ export async function setTelegramWebhook(publicUrl: string) {
   const data = await getTelegramData();
   const token = data.config.botToken;
   if (!token) throw new Error("Bot token required");
+  if (!publicUrl?.startsWith("https://")) {
+    throw new Error("Public URL must be HTTPS (e.g. https://basictrickhub.com)");
+  }
   const url = `${publicUrl.replace(/\/$/, "")}/api/telegram/webhook?secret=${data.config.webhookSecret}`;
   const res = await tgApi(token, "setWebhook", {
     url,
     allowed_updates: ["message", "callback_query", "my_chat_member", "chat_member"],
     drop_pending_updates: true,
   });
+  if (!res.ok) {
+    throw new Error(res.description || "setWebhook failed");
+  }
+  const info = await tgApi(token, "getWebhookInfo", {});
   await pushTgLog("info", `Webhook set → ${url}`);
-  return { url, result: res };
+  return { url, result: res, webhookInfo: info };
 }
 
 export async function getTelegramBotInfo() {

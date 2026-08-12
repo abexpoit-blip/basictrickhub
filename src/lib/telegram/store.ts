@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import path from "node:path";
-import { createTelegramSeed, migrateTelegramData, type TelegramBotData } from "./types";
+import { createTelegramSeed, migrateTelegramData, TELEGRAM_SCHEMA_VERSION, type TelegramBotData } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const TG_PATH = path.join(DATA_DIR, "telegram-bot.json");
@@ -12,15 +12,15 @@ async function ensure(): Promise<TelegramBotData> {
     const raw = await readFile(TG_PATH, "utf8");
     const parsed = JSON.parse(raw) as Partial<TelegramBotData>;
     const migrated = migrateTelegramData(parsed);
-    // persist migration once if notes/locks missing
-    if (
+    const needsPersist =
+      Number(parsed.schemaVersion || 0) < TELEGRAM_SCHEMA_VERSION ||
       !parsed.notes ||
       !parsed.security?.locks ||
       !parsed.security?.floodMode ||
       !parsed.booster ||
       !parsed.ai ||
-      !parsed.premium
-    ) {
+      !parsed.premium;
+    if (needsPersist) {
       await writeFile(TG_PATH, JSON.stringify(migrated, null, 2), "utf8");
     }
     return migrated;

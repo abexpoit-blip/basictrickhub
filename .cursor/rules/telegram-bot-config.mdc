@@ -21,8 +21,12 @@ alwaysApply: true
 - If a token was exposed in chat, rotate via @BotFather `/revoke`
 
 ## Groups / channels
-- Admin → **Groups** tab: paste `https://t.me/...`, `@username`, chat id, or invite link
-- Private invites stay Pending until the bot is added as admin, then Sync / my_chat_member activates them
+- Free / AI community: `https://t.me/basictrick` (`@basictrick`) — required to unlock AI
+- Official ID/VPN seller: `https://t.me/btidsellerbot`
+- Community admin: `https://t.me/Basictrickadmin`
+- Admin → **Groups** tab: paste link / `@username` / chat id / invite
+- Keywords (id, vpn, nord, pc clone, …) → Bangla suggest + seller bot button
+- Security defaults: welcome + goodbye on; block links / invite links / forwards (allowlist only official URLs)
 
 ## Deploy
 - Repo: `https://github.com/abexpoit-blip/basictrickhub`
