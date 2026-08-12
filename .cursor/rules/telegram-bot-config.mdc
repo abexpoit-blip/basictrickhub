@@ -24,6 +24,9 @@ alwaysApply: true
 - Free / AI community: `https://t.me/basictrick` (`@basictrick`) — required to unlock AI
 - Official ID/VPN seller: `https://t.me/btidsellerbot`
 - Community admin: `https://t.me/Basictrickadmin`
+- Security brand: **Basictrick Security Assistant** (Songmata name/username watch + Rose locks)
+- Group Booster force-add: `/forceadd 5` — must add N members before texting (BN+EN)
+- Link categories (Admin → Links): method, tools, shortner, card, sitelist — `/method` `/tools` `/shortner` `/card` `/sites`
 - Admin → **Groups** tab: paste link / `@username` / chat id / invite
 - Keywords (id, vpn, nord, pc clone, …) → Bangla suggest + seller bot button
 - Security defaults: welcome + goodbye on; block links / invite links / forwards (allowlist only official URLs)

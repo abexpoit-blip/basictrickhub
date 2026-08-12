@@ -20,6 +20,7 @@ import {
   tgAdminSaveBooster,
   tgAdminSaveConfig,
   tgAdminSaveKeywords,
+  tgAdminSaveLinks,
   tgAdminSaveNotes,
   tgAdminSavePremium,
   tgAdminSaveProducts,
@@ -34,6 +35,7 @@ import type {
   TelegramBotData,
   TgAiIntent,
   TgKeywordRule,
+  TgLinkButton,
   TgLocks,
   TgStoreProduct,
 } from "../lib/telegram/types";
@@ -60,6 +62,7 @@ const TABS = [
   "Keywords",
   "Notes",
   "Store",
+  "Links",
   "Orders",
   "Members",
   "Logs",
@@ -70,13 +73,18 @@ const inputCls =
 const PUNISH_MODES: PunishMode[] = ["warn", "mute", "tmute", "kick", "ban", "tban", "delete"];
 const PRODUCT_TYPES: BotProductType[] = [
   "tool",
+  "method",
   "course",
   "vip",
   "group",
-  "method",
   "account",
+  "shortner",
+  "card",
+  "sitelist",
   "other",
 ];
+
+const LINK_CATEGORIES = ["method", "tools", "shortner", "card", "sitelist", "other"] as const;
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -372,6 +380,16 @@ function TelegramAdminPage() {
             onSaved={(d) => {
               setData(d);
               setMsg("Store saved");
+            }}
+          />
+        )}
+        {tab === "Links" && (
+          <LinksPanel
+            data={data}
+            password={password}
+            onSaved={(d) => {
+              setData(d);
+              setMsg("Link buttons saved");
             }}
           />
         )}
@@ -744,8 +762,48 @@ function BoosterPanel({
             <Textarea className={inputCls} rows={3} value={booster.boostMessageEn} onChange={(e) => setBooster({ ...booster, boostMessageEn: e.target.value })} />
           </Field>
         </div>
+        <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-amber-200">Force-add before text</h3>
+          <label className="mb-3 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!booster.forceAddEnabled}
+              onChange={(e) => setBooster({ ...booster, forceAddEnabled: e.target.checked })}
+            />
+            Enabled — user must add N members before texting
+          </label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="Required adds (e.g. 5)">
+              <Input
+                className={inputCls}
+                type="number"
+                value={booster.forceAddRequired ?? 5}
+                onChange={(e) => setBooster({ ...booster, forceAddRequired: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Bot command">
+              <Input className={inputCls} value="/forceadd 5 · /forceadd on|off" readOnly />
+            </Field>
+            <Field label="Message BN">
+              <Textarea
+                className={inputCls}
+                rows={3}
+                value={booster.forceAddMessageBn || ""}
+                onChange={(e) => setBooster({ ...booster, forceAddMessageBn: e.target.value })}
+              />
+            </Field>
+            <Field label="Message EN">
+              <Textarea
+                className={inputCls}
+                rows={3}
+                value={booster.forceAddMessageEn || ""}
+                onChange={(e) => setBooster({ ...booster, forceAddMessageEn: e.target.value })}
+              />
+            </Field>
+          </div>
+        </div>
         <p className="mt-2 text-[11px] text-slate-500">
-          Note: Telegram API ইউজারকে জোর করে অ্যাড করতে দেয় না — বট অটো ইনভাইট পাঠায় + মেম্বারশিপ চেক করে। ইউজার লিংকে জয়েন করলেই কাউন্ট হয়।
+          Note: Telegram API ইউজারকে জোর করে অ্যাড করতে দেয় না — কেউ মেম্বার অ্যাড করলে কাউন্ট হয়। কমান্ড: /forceadd 5
         </p>
       </Card>
       <Card title="Premium AI unlock" subtitle="AI ব্যবহার করতে ফ্রি গ্রুপ + নিজের গ্রুপগুলোতে বট অ্যাড লাগবে">
@@ -1321,8 +1379,8 @@ function SecurityPanel({
 
   return (
     <Card
-      title="Rose security"
-      subtitle="Locks · Flood · Captcha · Warns — সব Admin থেকে"
+      title="Basictrick Security Assistant"
+      subtitle="Songmata name-watch · Rose locks · Flood · Captcha — branded security"
       action={
         <Button
           disabled={busy}
@@ -1348,13 +1406,16 @@ function SecurityPanel({
             ["antiRaid", "Anti-raid"],
             ["approvalMode", "Approval"],
             ["welcomeEnabled", "Welcome"],
+            ["goodbyeEnabled", "Goodbye"],
+            ["nameWatchEnabled", "Name/Username watch"],
             ["nightMode", "Night mode"],
             ["blockInvitelinks", "Block invites"],
+            ["blockLinks", "Block links"],
             ["cleanService", "Clean service"],
           ] as const
         ).map(([k, label]) => (
           <label key={k} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={sec[k]} onChange={(e) => setSec({ ...sec, [k]: e.target.checked })} />
+            <input type="checkbox" checked={!!sec[k]} onChange={(e) => setSec({ ...sec, [k]: e.target.checked })} />
             {label}
           </label>
         ))}
@@ -1409,10 +1470,19 @@ function SecurityPanel({
         <Field label="Rules">
           <Textarea className={inputCls} rows={3} value={sec.rulesText} onChange={(e) => setSec({ ...sec, rulesText: e.target.value })} />
         </Field>
+        <Field label="Goodbye message">
+          <Textarea className={inputCls} rows={2} value={sec.goodbyeMessage} onChange={(e) => setSec({ ...sec, goodbyeMessage: e.target.value })} />
+        </Field>
+        <Field label="Name change BN (Songmata)">
+          <Textarea className={inputCls} rows={2} value={sec.nameChangeMessageBn || ""} onChange={(e) => setSec({ ...sec, nameChangeMessageBn: e.target.value })} />
+        </Field>
+        <Field label="Username change BN">
+          <Textarea className={inputCls} rows={2} value={sec.usernameChangeMessageBn || ""} onChange={(e) => setSec({ ...sec, usernameChangeMessageBn: e.target.value })} />
+        </Field>
+        <Field label="Log channel ID">
+          <Input className={inputCls} value={sec.logChannelId} onChange={(e) => setSec({ ...sec, logChannelId: e.target.value })} />
+        </Field>
       </div>
-      <Field label="Log channel ID">
-        <Input className={inputCls} value={sec.logChannelId} onChange={(e) => setSec({ ...sec, logChannelId: e.target.value })} />
-      </Field>
     </Card>
   );
 }
@@ -1579,6 +1649,132 @@ function StorePanel({
           <Input className={inputCls} type="number" value={p.priceUsd} onChange={(e) => { const n = [...products]; n[idx] = { ...p, priceUsd: Number(e.target.value) }; setProducts(n); }} />
         </div>
       ))}
+    </Card>
+  );
+}
+
+function LinksPanel({
+  data,
+  password,
+  onSaved,
+}: {
+  data: TelegramBotData;
+  password: string;
+  onSaved: (d: TelegramBotData) => void;
+}) {
+  const [links, setLinks] = useState<TgLinkButton[]>(data.linkButtons || []);
+  useEffect(() => setLinks(data.linkButtons || []), [data.linkButtons]);
+
+  return (
+    <Card
+      title="Link buttons"
+      subtitle="Method · Tools · Shortner · Card · Site list — বাটনে ক্লিক করলে ওয়েবসাইট খুলবে"
+      action={
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="border-white/15"
+            onClick={() => {
+              const row: TgLinkButton = {
+                id: newId("link"),
+                category: "method",
+                title: "New link",
+                buttonText: "Open",
+                url: "https://basictrickhub.com",
+                isActive: true,
+                sortOrder: links.length + 1,
+              };
+              setLinks([row, ...links]);
+            }}
+          >
+            + Add button
+          </Button>
+          <Button
+            className="bg-sky-500 text-slate-950"
+            onClick={async () => onSaved(await tgAdminSaveLinks({ data: { password, linkButtons: links } }))}
+          >
+            Save
+          </Button>
+        </div>
+      }
+    >
+      <p className="mb-3 text-xs text-slate-400">
+        Bot commands: /method · /tools · /shortner · /card · /sites
+      </p>
+      {links.map((l, idx) => (
+        <div key={l.id} className="mb-3 grid gap-2 rounded-xl border border-white/10 p-3 md:grid-cols-2">
+          <Field label="Title">
+            <Input
+              className={inputCls}
+              value={l.title}
+              onChange={(e) => {
+                const n = [...links];
+                n[idx] = { ...l, title: e.target.value };
+                setLinks(n);
+              }}
+            />
+          </Field>
+          <Field label="Category">
+            <select
+              className={`h-10 w-full rounded-md border px-3 text-sm ${inputCls}`}
+              value={l.category}
+              onChange={(e) => {
+                const n = [...links];
+                n[idx] = { ...l, category: e.target.value as TgLinkButton["category"] };
+                setLinks(n);
+              }}
+            >
+              {LINK_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Button text">
+            <Input
+              className={inputCls}
+              value={l.buttonText}
+              onChange={(e) => {
+                const n = [...links];
+                n[idx] = { ...l, buttonText: e.target.value };
+                setLinks(n);
+              }}
+            />
+          </Field>
+          <Field label="URL (https://…)">
+            <Input
+              className={inputCls}
+              value={l.url}
+              onChange={(e) => {
+                const n = [...links];
+                n[idx] = { ...l, url: e.target.value };
+                setLinks(n);
+              }}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={l.isActive}
+              onChange={(e) => {
+                const n = [...links];
+                n[idx] = { ...l, isActive: e.target.checked };
+                setLinks(n);
+              }}
+            />
+            Active
+          </label>
+          <Button
+            variant="outline"
+            className="border-rose-500/40 text-rose-300"
+            onClick={() => setLinks(links.filter((x) => x.id !== l.id))}
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      {!links.length && <p className="text-sm text-slate-500">No link buttons yet</p>}
     </Card>
   );
 }

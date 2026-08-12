@@ -1,4 +1,26 @@
-export type BotProductType = "tool" | "course" | "vip" | "group" | "method" | "account" | "other";
+export type BotProductType =
+  | "tool"
+  | "course"
+  | "vip"
+  | "group"
+  | "method"
+  | "account"
+  | "shortner"
+  | "card"
+  | "sitelist"
+  | "other";
+
+export type LinkCategory = "method" | "tools" | "shortner" | "card" | "sitelist" | "other";
+
+export interface TgLinkButton {
+  id: string;
+  category: LinkCategory;
+  title: string;
+  buttonText: string;
+  url: string;
+  isActive: boolean;
+  sortOrder: number;
+}
 
 export type PunishMode = "warn" | "mute" | "tmute" | "kick" | "ban" | "tban" | "delete";
 
@@ -79,6 +101,11 @@ export interface TgBoosterConfig {
   targetDailyJoins: number;
   invitesSent: number;
   joinsTracked: number;
+  /** Must add N members before texting in groups */
+  forceAddEnabled: boolean;
+  forceAddRequired: number;
+  forceAddMessageBn: string;
+  forceAddMessageEn: string;
 }
 
 export interface TgPremiumGate {
@@ -165,6 +192,8 @@ export interface TgMember {
   approved?: boolean;
   joinedFreeGroup?: boolean;
   addedGroupIds: string[];
+  /** Per-chat count of members this user added (Group Booster force-add) */
+  inviteAddsByChat?: Record<string, number>;
   aiUnlocked?: boolean;
   boostInvitesSent?: number;
   purchasedProductIds: string[];
@@ -231,6 +260,12 @@ export interface TgSecurityConfig {
   logChannelId: string;
   nightMode: boolean;
   nightMuteAll: boolean;
+  /** Songmata-style name / username change alerts */
+  nameWatchEnabled: boolean;
+  nameChangeMessageBn: string;
+  nameChangeMessageEn: string;
+  usernameChangeMessageBn: string;
+  usernameChangeMessageEn: string;
 }
 
 export interface TgBotConfig {
@@ -257,6 +292,7 @@ export interface TelegramBotData {
   keywords: TgKeywordRule[];
   notes: TgNote[];
   products: TgStoreProduct[];
+  linkButtons: TgLinkButton[];
   orders: TgOrder[];
   members: TgMember[];
   managedGroups: TgManagedGroup[];
@@ -264,8 +300,8 @@ export interface TelegramBotData {
   logs: { id: string; at: string; level: string; message: string }[];
 }
 
-/** Bump to force-apply community defaults (keywords, locks, free group) on existing VPS data. */
-export const TELEGRAM_SCHEMA_VERSION = 2;
+/** Bump to force-apply community defaults on existing VPS data. */
+export const TELEGRAM_SCHEMA_VERSION = 3;
 
 export const DEFAULT_LOCKS: TgLocks = {
   url: false,
@@ -341,6 +377,15 @@ export function defaultSecurity(): TgSecurityConfig {
     logChannelId: "",
     nightMode: false,
     nightMuteAll: false,
+    nameWatchEnabled: true,
+    nameChangeMessageBn:
+      "📝 নাম পরিবর্তন ধরা পড়েছে\nপুরনো: {oldName}\nনতুন: {newName}\nইউজার: {mention} (`{id}`)",
+    nameChangeMessageEn:
+      "📝 Name change detected\nOld: {oldName}\nNew: {newName}\nUser: {mention} (`{id}`)",
+    usernameChangeMessageBn:
+      "🔖 ইউজারনেম পরিবর্তন\nপুরনো: @{oldUsername}\nনতুন: @{newUsername}\nইউজার: {mention} (`{id}`)",
+    usernameChangeMessageEn:
+      "🔖 Username change\nOld: @{oldUsername}\nNew: @{newUsername}\nUser: {mention} (`{id}`)",
   };
 }
 
@@ -360,6 +405,12 @@ export function defaultBooster(): TgBoosterConfig {
     targetDailyJoins: 100,
     invitesSent: 0,
     joinsTracked: 0,
+    forceAddEnabled: true,
+    forceAddRequired: 5,
+    forceAddMessageBn:
+      "⛔ টেক্সট করতে হলে আগে {required} জন মেম্বার অ্যাড করুন।\nআপনি অ্যাড করেছেন: {current}/{required}\nবাকি: {left} জন\n\nAdd {required} members first, then you can text.",
+    forceAddMessageEn:
+      "⛔ You must add {required} members before you can text.\nAdded: {current}/{required}\nLeft: {left}\n\nটেক্সট করতে {required} জন অ্যাড করুন।",
   };
 }
 
@@ -621,6 +672,7 @@ export function createTelegramSeed(): TelegramBotData {
         sortOrder: 3,
       },
     ],
+    linkButtons: defaultLinkButtons(),
     orders: [],
     members: [],
     managedGroups: [],
@@ -630,10 +682,60 @@ export function createTelegramSeed(): TelegramBotData {
         id: "log-seed",
         at: now,
         level: "info",
-        message: "Telegram Admin initialized — Rose + Omni AI + Group Booster",
+        message: "Telegram Admin initialized — Security Assistant + Omni AI + Group Booster",
       },
     ],
   };
+}
+
+export function defaultLinkButtons(): TgLinkButton[] {
+  return [
+    {
+      id: "link-method-1",
+      category: "method",
+      title: "Method Hub",
+      buttonText: "📘 Open Methods",
+      url: "https://basictrickhub.com/method",
+      isActive: true,
+      sortOrder: 1,
+    },
+    {
+      id: "link-tools-1",
+      category: "tools",
+      title: "Tools Hub",
+      buttonText: "🛠 Open Tools",
+      url: "https://basictrickhub.com/tools",
+      isActive: true,
+      sortOrder: 1,
+    },
+    {
+      id: "link-shortner-1",
+      category: "shortner",
+      title: "Shortner",
+      buttonText: "🔗 Shortner Links",
+      url: "https://basictrickhub.com",
+      isActive: true,
+      sortOrder: 1,
+    },
+    {
+      id: "link-card-1",
+      category: "card",
+      title: "Card List",
+      buttonText: "💳 Card Sites",
+      url: "https://basictrickhub.com",
+      isActive: true,
+      sortOrder: 1,
+    },
+    {
+      id: "link-sites-1",
+      category: "sitelist",
+      title: "Site List",
+      buttonText: "🌐 Site List",
+      url: "https://basictrickhub.com",
+      isActive: true,
+      sortOrder: 1,
+    },
+  ];
 }
 
 export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotData {
@@ -673,13 +775,31 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
     ? {
         ...defaultBooster(),
         ...(raw.booster || {}),
-        freeGroupId: "@basictrick",
-        freeGroupInvite: "https://t.me/basictrick",
-        freeGroupTitle: "Basictrick Free / AI Community",
+        freeGroupId: raw.booster?.freeGroupId || "@basictrick",
+        freeGroupInvite: raw.booster?.freeGroupInvite || "https://t.me/basictrick",
+        freeGroupTitle: raw.booster?.freeGroupTitle || "Basictrick Free / AI Community",
         requireJoinFreeGroup: true,
         enabled: true,
+        forceAddEnabled: raw.booster?.forceAddEnabled ?? true,
+        forceAddRequired: raw.booster?.forceAddRequired ?? 5,
+        forceAddMessageBn: raw.booster?.forceAddMessageBn || defaultBooster().forceAddMessageBn,
+        forceAddMessageEn: raw.booster?.forceAddMessageEn || defaultBooster().forceAddMessageEn,
       }
-    : { ...defaultBooster(), ...(raw.booster || {}) };
+    : {
+        ...defaultBooster(),
+        ...(raw.booster || {}),
+        forceAddEnabled: raw.booster?.forceAddEnabled ?? defaultBooster().forceAddEnabled,
+        forceAddRequired: raw.booster?.forceAddRequired ?? defaultBooster().forceAddRequired,
+        forceAddMessageBn: raw.booster?.forceAddMessageBn || defaultBooster().forceAddMessageBn,
+        forceAddMessageEn: raw.booster?.forceAddMessageEn || defaultBooster().forceAddMessageEn,
+      };
+
+  // Ensure name-watch fields exist even without full pack re-apply
+  if (sec.nameWatchEnabled === undefined) sec.nameWatchEnabled = true;
+  if (!sec.nameChangeMessageBn) sec.nameChangeMessageBn = defaultSecurity().nameChangeMessageBn;
+  if (!sec.nameChangeMessageEn) sec.nameChangeMessageEn = defaultSecurity().nameChangeMessageEn;
+  if (!sec.usernameChangeMessageBn) sec.usernameChangeMessageBn = defaultSecurity().usernameChangeMessageBn;
+  if (!sec.usernameChangeMessageEn) sec.usernameChangeMessageEn = defaultSecurity().usernameChangeMessageEn;
 
   const premium = applyCommunityPack
     ? {
@@ -711,11 +831,13 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
     keywords: applyCommunityPack ? communityKeywordRules() : raw.keywords?.length ? raw.keywords : seed.keywords,
     notes: applyCommunityPack ? seed.notes : raw.notes?.length ? raw.notes : seed.notes,
     products: raw.products?.length ? raw.products : seed.products,
+    linkButtons: raw.linkButtons?.length ? raw.linkButtons : seed.linkButtons,
     orders: raw.orders || [],
     members: (raw.members || []).map((m) => ({
       ...m,
       purchasedProductIds: m.purchasedProductIds || [],
       addedGroupIds: m.addedGroupIds || [],
+      inviteAddsByChat: m.inviteAddsByChat || {},
       warns: m.warns ?? 0,
       banned: m.banned ?? false,
     })),
@@ -759,7 +881,11 @@ function pickCommunitySecurity(raw?: Partial<TgSecurityConfig>): Partial<TgSecur
     goodbyeEnabled: true,
     goodbyeMessage: d.goodbyeMessage,
     rulesText: d.rulesText,
-    // keep operator-tuned values from disk when present
+    nameWatchEnabled: true,
+    nameChangeMessageBn: d.nameChangeMessageBn,
+    nameChangeMessageEn: d.nameChangeMessageEn,
+    usernameChangeMessageBn: d.usernameChangeMessageBn,
+    usernameChangeMessageEn: d.usernameChangeMessageEn,
     logChannelId: raw?.logChannelId ?? d.logChannelId,
     floodMaxMessages: raw?.floodMaxMessages ?? d.floodMaxMessages,
     maxWarns: raw?.maxWarns ?? d.maxWarns,

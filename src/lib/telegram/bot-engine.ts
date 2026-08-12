@@ -6,6 +6,7 @@ import {
   refreshAiUnlock,
   sendBoostInvite,
 } from "./booster";
+import { securityMsg } from "./branding";
 import { matchKeyword } from "./keywords";
 import {
   applyPunish,
@@ -27,7 +28,8 @@ import {
   parseDurationToSeconds,
 } from "./security";
 import { getTelegramData, pushTgLog, updateTelegramData } from "./store";
-import type { BotProductType, TelegramBotData } from "./types";
+import type { BotProductType, LinkCategory, TelegramBotData } from "./types";
+import { TELEGRAM_BOT_COMMANDS } from "./commands-catalog";
 
 type TgUser = { id: number; username?: string; first_name?: string; is_bot?: boolean };
 
@@ -83,6 +85,87 @@ function kb(rows: { text: string; url?: string; callback_data?: string }[][]) {
       ),
     ),
   };
+}
+
+async function sendLinkCategory(
+  token: string,
+  chatId: number,
+  data: TelegramBotData,
+  category: LinkCategory,
+  title: string,
+) {
+  const links = (data.linkButtons || [])
+    .filter((l) => l.isActive && l.category === category)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  if (!links.length) {
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: securityMsg(`${title}\nএখনো লিংক নেই — Admin → Links থেকে বাটন অ্যাড করুন।`),
+    });
+    return;
+  }
+  const lines = links.map((l, i) => `${i + 1}. ${l.title}`).join("\n");
+  await tgApi(token, "sendMessage", {
+    chat_id: chatId,
+    text: `${title}\n\n${lines}`,
+    reply_markup: kb(links.map((l) => [{ text: l.buttonText || l.title, url: l.url }])),
+  });
+}
+
+async function announceProfileChanges(
+  token: string,
+  chatId: number,
+  from: TgUser,
+  data: TelegramBotData,
+) {
+  if (!data.security.nameWatchEnabled || from.is_bot) return;
+  const existing = data.members.find((m) => m.telegramUserId === String(from.id));
+  if (!existing) return;
+
+  const mention = from.username ? `@${from.username}` : from.first_name || String(from.id);
+  const lang = data.config.defaultLang;
+  const oldName = existing.firstName || "";
+  const newName = from.first_name || "";
+  const oldUser = (existing.username || "").toLowerCase();
+  const newUser = (from.username || "").toLowerCase();
+
+  if (oldName && newName && oldName !== newName) {
+    const tpl = lang === "bn" ? data.security.nameChangeMessageBn : data.security.nameChangeMessageEn;
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: securityMsg(
+        fillTemplate(tpl, {
+          oldName,
+          newName,
+          mention,
+          id: String(from.id),
+        }),
+      ),
+      parse_mode: "Markdown",
+    });
+  }
+
+  // First seen username empty → new set; or change
+  if ((oldUser || newUser) && oldUser !== newUser) {
+    const tpl =
+      lang === "bn" ? data.security.usernameChangeMessageBn : data.security.usernameChangeMessageEn;
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: securityMsg(
+        fillTemplate(tpl, {
+          oldUsername: existing.username || "none",
+          newUsername: from.username || "none",
+          mention,
+          id: String(from.id),
+        }),
+      ),
+      parse_mode: "Markdown",
+    });
+  }
+}
+
+function forceAddCount(member: { inviteAddsByChat?: Record<string, number> } | undefined, chatId: string) {
+  return member?.inviteAddsByChat?.[chatId] || 0;
 }
 
 async function sendStoreCatalog(
@@ -142,9 +225,10 @@ async function upsertMember(from: TgUser) {
       });
     } else {
       member.lastSeenAt = new Date().toISOString();
-      member.username = from.username || member.username;
-      member.firstName = from.first_name || member.firstName;
+      member.username = from.username;
+      if (from.first_name) member.firstName = from.first_name;
       member.addedGroupIds = member.addedGroupIds || [];
+      member.inviteAddsByChat = member.inviteAddsByChat || {};
     }
     return d;
   });
@@ -277,12 +361,48 @@ export async function processTelegramUpdate(update: TgUpdate) {
   // Join / leave
   if (update.message?.new_chat_members?.length) {
     const chatId = update.message.chat.id;
-    const raid = checkAntiRaid(String(chatId), data.security);
+    const chatKey = String(chatId);
+    const adderId = update.message.from?.id ? String(update.message.from.id) : "";
+    const raid = checkAntiRaid(chatKey, data.security);
     if (raid.raid) {
       for (const m of update.message.new_chat_members) {
         await tgApi(token, "banChatMember", { chat_id: chatId, user_id: m.id });
       }
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg("🚨 Anti-raid: mass joins blocked."),
+      });
       return { ok: true, raid: true };
+    }
+
+    // Credit inviter for Group Booster force-add (only when A adds B, not self-join via link)
+    if (adderId) {
+      const addedOthers = update.message.new_chat_members.filter((m) => String(m.id) !== adderId && !m.is_bot);
+      if (addedOthers.length) {
+        await updateTelegramData((d) => {
+          let mem = d.members.find((x) => x.telegramUserId === adderId);
+          if (!mem && update.message?.from) {
+            mem = {
+              telegramUserId: adderId,
+              username: update.message.from.username,
+              firstName: update.message.from.first_name,
+              warns: 0,
+              banned: false,
+              addedGroupIds: [],
+              inviteAddsByChat: {},
+              purchasedProductIds: [],
+              createdAt: new Date().toISOString(),
+              lastSeenAt: new Date().toISOString(),
+            };
+            d.members.push(mem);
+          }
+          if (mem) {
+            mem.inviteAddsByChat = mem.inviteAddsByChat || {};
+            mem.inviteAddsByChat[chatKey] = (mem.inviteAddsByChat[chatKey] || 0) + addedOthers.length;
+          }
+          return d;
+        });
+      }
     }
 
     for (const m of update.message.new_chat_members) {
@@ -298,7 +418,6 @@ export async function processTelegramUpdate(update: TgUpdate) {
           mem.captchaJoinedAt = new Date().toISOString();
           mem.approved = false;
         }
-        // track free group joins for booster
         if (d.booster.freeGroupId && String(chatId) === d.booster.freeGroupId) {
           if (mem) {
             mem.joinedFreeGroup = true;
@@ -326,11 +445,13 @@ export async function processTelegramUpdate(update: TgUpdate) {
         }
         await tgApi(token, "sendMessage", {
           chat_id: chatId,
-          text: fillTemplate(tpl, {
-            name: m.first_name || m.username || "member",
-            support: data.config.supportUrl,
-            first: m.first_name || "member",
-          }),
+          text: securityMsg(
+            fillTemplate(tpl, {
+              name: m.first_name || m.username || "member",
+              support: data.config.supportUrl,
+              first: m.first_name || "member",
+            }),
+          ),
           reply_markup: buttons.length ? kb(buttons) : undefined,
         });
       }
@@ -358,9 +479,11 @@ export async function processTelegramUpdate(update: TgUpdate) {
     if (data.security.goodbyeEnabled) {
       await tgApi(token, "sendMessage", {
         chat_id: update.message.chat.id,
-        text: fillTemplate(data.security.goodbyeMessage, {
-          name: left.first_name || left.username || "member",
-        }),
+        text: securityMsg(
+          fillTemplate(data.security.goodbyeMessage, {
+            name: left.first_name || left.username || "member",
+          }),
+        ),
       });
     }
     if (data.security.cleanService) {
@@ -445,7 +568,12 @@ export async function processTelegramUpdate(update: TgUpdate) {
       return { ok: true };
     }
     if (payload === "menu:tools" && chatId) {
+      await sendLinkCategory(token, chatId, data, "tools", "🛠 Tools");
       await sendStoreCatalog(token, chatId, data, "tool");
+      return { ok: true };
+    }
+    if (payload === "menu:method" && chatId) {
+      await sendLinkCategory(token, chatId, data, "method", "📘 Methods");
       return { ok: true };
     }
 
@@ -486,18 +614,25 @@ export async function processTelegramUpdate(update: TgUpdate) {
   const userId = String(msg.from.id);
   const text = (msg.text || msg.caption || "").trim();
   const chatId = msg.chat.id;
+  const chatKey = String(chatId);
   const admin = isBotAdmin(userId, data);
+  const isGroup = msg.chat.type !== "private";
+
+  // Songmata-style name/username watch (before upsert overwrites)
+  if (isGroup && data.security.nameWatchEnabled) {
+    await announceProfileChanges(token, chatId, msg.from, data);
+  }
 
   await upsertMember(msg.from);
 
   // Register group if bot sees messages there
-  if (msg.chat.type !== "private") {
+  if (isGroup) {
     await updateTelegramData((d) => {
-      let g = d.managedGroups.find((x) => x.chatId === String(chatId));
+      let g = d.managedGroups.find((x) => x.chatId === chatKey);
       if (!g) {
         d.managedGroups.push({
-          chatId: String(chatId),
-          title: msg.chat.title || String(chatId),
+          chatId: chatKey,
+          title: msg.chat.title || chatKey,
           type: msg.chat.type,
           isActive: true,
           createdAt: new Date().toISOString(),
@@ -530,6 +665,38 @@ export async function processTelegramUpdate(update: TgUpdate) {
     return { ok: true };
   }
 
+  // Group Booster: must add N members before texting
+  if (
+    isGroup &&
+    !admin &&
+    fresh.booster.forceAddEnabled &&
+    fresh.booster.forceAddRequired > 0 &&
+    text &&
+    !text.startsWith("/")
+  ) {
+    const current = forceAddCount(member, chatKey);
+    const required = fresh.booster.forceAddRequired;
+    if (current < required) {
+      await tgApi(token, "deleteMessage", { chat_id: chatId, message_id: msg.message_id });
+      const left = required - current;
+      const tpl =
+        fresh.config.defaultLang === "bn"
+          ? fresh.booster.forceAddMessageBn
+          : fresh.booster.forceAddMessageEn;
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(
+          fillTemplate(tpl, {
+            required: String(required),
+            current: String(current),
+            left: String(left),
+          }),
+        ),
+      });
+      return { ok: true, forceAdd: true };
+    }
+  }
+
   if (!admin) {
     const locked = detectLockedContent(
       {
@@ -554,7 +721,10 @@ export async function processTelegramUpdate(update: TgUpdate) {
     );
     if (locked) {
       await tgApi(token, "deleteMessage", { chat_id: chatId, message_id: msg.message_id });
-      await tgApi(token, "sendMessage", { chat_id: chatId, text: `🔒 Locked: ${locked}` });
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(`🔒 Locked: ${locked}`),
+      });
       return { ok: true, locked };
     }
   }
@@ -817,7 +987,59 @@ export async function processTelegramUpdate(update: TgUpdate) {
       });
       await tgApi(token, "sendMessage", {
         chat_id: chatId,
-        text: on ? "🌙 Night ON" : "☀️ Night OFF",
+        text: securityMsg(on ? "🌙 Night ON" : "☀️ Night OFF"),
+      });
+      return { ok: true };
+    }
+    if (cmd === "/forceadd") {
+      const a0 = (args[0] || "").toLowerCase();
+      if (a0 === "on" || a0 === "off") {
+        await updateTelegramData((d) => {
+          d.booster.forceAddEnabled = a0 === "on";
+          return d;
+        });
+        await tgApi(token, "sendMessage", {
+          chat_id: chatId,
+          text: securityMsg(`Force-add ${a0 === "on" ? "ON" : "OFF"}`),
+        });
+        return { ok: true };
+      }
+      if (/^\d+$/.test(a0)) {
+        const n = Math.max(0, Number(a0));
+        await updateTelegramData((d) => {
+          d.booster.forceAddRequired = n;
+          d.booster.forceAddEnabled = n > 0;
+          return d;
+        });
+        await tgApi(token, "sendMessage", {
+          chat_id: chatId,
+          text: securityMsg(`Force-add required set to ${n}`),
+        });
+        return { ok: true };
+      }
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg("Usage: /forceadd on|off|<number>\nExample: /forceadd 5"),
+      });
+      return { ok: true };
+    }
+    if (cmd === "/namewatch") {
+      const on = (args[0] || "on").toLowerCase() !== "off";
+      await updateTelegramData((d) => {
+        d.security.nameWatchEnabled = on;
+        return d;
+      });
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(`Name/username watch ${on ? "ON" : "OFF"}`),
+      });
+      return { ok: true };
+    }
+    if (cmd === "/setcommands") {
+      const res = await tgApi(token, "setMyCommands", { commands: TELEGRAM_BOT_COMMANDS });
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: securityMsg(res.ok ? "Bot command menu updated ✅" : `Failed: ${res.description}`),
       });
       return { ok: true };
     }
@@ -829,20 +1051,24 @@ export async function processTelegramUpdate(update: TgUpdate) {
       // invite after welcome
     }
     const helpAdmin = admin
-      ? `\n\n🛡 Admin: /ban /mute /warn /purge /lock /save /night`
+      ? `\n\n🛡 Admin: /ban /mute /warn /lock /forceadd /namewatch /setcommands /night`
       : "";
     await tgApi(token, "sendMessage", {
       chat_id: chatId,
       text:
         `${fresh.premium.premiumBadge}\n` +
         (fresh.config.defaultLang === "bn"
-          ? `🤖 ${fresh.ai.personaName}\n\n/shop /vip /course /tools\n/boost — ফ্রি গ্রুপ\n/aistatus — Premium AI\n/rules /id /get <note>\n\nস্মার্ট চ্যাট: facebook id, দাম, কিনব…`
-          : `🤖 ${fresh.ai.personaName}\n\n/shop /vip /course /tools\n/boost — free group\n/aistatus — Premium AI\n/rules /id /get <note>\n\nSmart chat: facebook id, price, buy…`) +
+          ? `🤖 ${fresh.ai.personaName}\n🛡 Basictrick Security Assistant\n\n/shop /vip /course /tools\n/method /shortner /card /sites\n/boost — ফ্রি গ্রুপ\n/aistatus — AI\n/forceaddstatus — অ্যাড কাউন্ট\n/rules /id\n\nস্মার্ট: facebook id, vpn, দাম…`
+          : `🤖 ${fresh.ai.personaName}\n🛡 Basictrick Security Assistant\n\n/shop /vip /course /tools\n/method /shortner /card /sites\n/boost — free group\n/aistatus — AI\n/forceaddstatus — add count\n/rules /id`) +
         helpAdmin,
       reply_markup: kb([
         [
           { text: "🛒 Shop", callback_data: "menu:shop" },
           { text: "⭐ VIP", callback_data: "menu:vip" },
+        ],
+        [
+          { text: "📘 Method", callback_data: "menu:method" },
+          { text: "🛠 Tools", callback_data: "menu:tools" },
         ],
         [
           { text: "🚀 Boost", callback_data: "menu:boost" },
@@ -859,6 +1085,37 @@ export async function processTelegramUpdate(update: TgUpdate) {
     if (fresh.booster.enabled && fresh.booster.autoSendInviteOnStart) {
       await sendBoostInvite(token, chatId, fresh, userId);
     }
+    return { ok: true };
+  }
+
+  if (cmd === "/forceaddstatus") {
+    const current = forceAddCount(member, chatKey);
+    const required = fresh.booster.forceAddRequired;
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: securityMsg(
+        fresh.config.defaultLang === "bn"
+          ? `📊 Force-add স্ট্যাটাস\nঅ্যাড: ${current}/${required}\nসিস্টেম: ${fresh.booster.forceAddEnabled ? "ON" : "OFF"}`
+          : `📊 Force-add status\nAdded: ${current}/${required}\nSystem: ${fresh.booster.forceAddEnabled ? "ON" : "OFF"}`,
+      ),
+    });
+    return { ok: true };
+  }
+
+  if (cmd === "/method") {
+    await sendLinkCategory(token, chatId, fresh, "method", "📘 Methods");
+    return { ok: true };
+  }
+  if (cmd === "/shortner" || cmd === "/shortener") {
+    await sendLinkCategory(token, chatId, fresh, "shortner", "🔗 Shortner Links");
+    return { ok: true };
+  }
+  if (cmd === "/card" || cmd === "/cards") {
+    await sendLinkCategory(token, chatId, fresh, "card", "💳 Card Sites");
+    return { ok: true };
+  }
+  if (cmd === "/sites" || cmd === "/sitelist") {
+    await sendLinkCategory(token, chatId, fresh, "sitelist", "🌐 Site List");
     return { ok: true };
   }
 
@@ -915,6 +1172,9 @@ export async function processTelegramUpdate(update: TgUpdate) {
   }
 
   if (cmd === "/shop" || cmd === "/vip" || cmd === "/course" || cmd === "/tools") {
+    if (cmd === "/tools") {
+      await sendLinkCategory(token, chatId, fresh, "tools", "🛠 Tools");
+    }
     const typeFilter: BotProductType | undefined =
       cmd === "/vip" ? "vip" : cmd === "/course" ? "course" : cmd === "/tools" ? "tool" : undefined;
     await sendStoreCatalog(token, chatId, fresh, typeFilter);
@@ -1006,6 +1266,7 @@ export async function setTelegramWebhook(publicUrl: string) {
   if (!res.ok) {
     throw new Error(res.description || "setWebhook failed");
   }
+  await tgApi(token, "setMyCommands", { commands: TELEGRAM_BOT_COMMANDS });
   const info = await tgApi(token, "getWebhookInfo", {});
   await pushTgLog("info", `Webhook set → ${url}`);
   return { url, result: res, webhookInfo: info };

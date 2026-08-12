@@ -112,6 +112,16 @@ export const tgAdminSaveProducts = createServerFn({ method: "POST" })
     });
   });
 
+export const tgAdminSaveLinks = createServerFn({ method: "POST" })
+  .validator((d: { password: string; linkButtons: import("./types").TgLinkButton[] }) => d)
+  .handler(async ({ data }) => {
+    assertAdmin(data.password);
+    return updateTelegramData((s) => {
+      s.linkButtons = data.linkButtons;
+      return s;
+    });
+  });
+
 export const tgAdminCreatePost = createServerFn({ method: "POST" })
   .validator(
     (d: {
