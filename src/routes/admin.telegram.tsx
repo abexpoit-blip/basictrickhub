@@ -6,6 +6,7 @@ import { Textarea } from "../components/ui/textarea";
 import { verifyAdminPassword } from "../lib/server-fns";
 import { BOT_COMMAND_DOCS } from "../lib/telegram/commands-catalog";
 import {
+  tgAdminAddGroup,
   tgAdminBotStatus,
   tgAdminBroadcastPost,
   tgAdminCreatePost,
@@ -14,6 +15,7 @@ import {
   tgAdminGet,
   tgAdminMarkPaid,
   tgAdminMemberAction,
+  tgAdminRemoveGroup,
   tgAdminSaveAi,
   tgAdminSaveBooster,
   tgAdminSaveConfig,
@@ -23,6 +25,8 @@ import {
   tgAdminSaveProducts,
   tgAdminSaveSecurity,
   tgAdminSetWebhook,
+  tgAdminSyncGroups,
+  tgAdminToggleGroup,
 } from "../lib/telegram/admin-fns";
 import type {
   BotProductType,
@@ -47,6 +51,7 @@ export const Route = createFileRoute("/admin/telegram")({
 const TABS = [
   "Overview",
   "Connect",
+  "Groups",
   "Commands",
   "Booster",
   "AI Brain",
@@ -288,6 +293,15 @@ function TelegramAdminPage() {
             onErr={setError}
           />
         )}
+        {tab === "Groups" && (
+          <GroupsPanel
+            data={data}
+            password={password}
+            onSaved={setData}
+            onMsg={setMsg}
+            onErr={setError}
+          />
+        )}
         {tab === "Commands" && <CommandsPanel />}
         {tab === "Booster" && (
           <BoosterPanel
@@ -499,13 +513,13 @@ function ConnectPanel({
     <div className="space-y-4">
       <Card title="Connect Telegram" subtitle="BotFather token → HTTPS webhook → Test">
         <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-slate-300">
-          <li>@BotFather → /newbot → token</li>
-          <li>@userinfobot → নিজের ID → Admin IDs</li>
+          <li>@BotFather → token paste below</li>
+          <li>Admin IDs: your Telegram numeric IDs (comma separated)</li>
           <li>
-            <code className="text-sky-300">ngrok http 8080</code> → Public HTTPS URL
+            Public HTTPS URL: <code className="text-sky-300">https://basictrickhub.com</code>
           </li>
           <li>Save → Test getMe → Set Webhook</li>
-          <li>গ্রুপে বট অ্যাড + Admin (Delete + Ban)</li>
+          <li>Groups tab → paste group/channel link to register</li>
         </ol>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Bot token">
@@ -928,6 +942,166 @@ function AiPanel({
               </div>
             </div>
           ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function GroupsPanel({
+  data,
+  password,
+  onSaved,
+  onMsg,
+  onErr,
+}: {
+  data: TelegramBotData;
+  password: string;
+  onSaved: (d: TelegramBotData) => void;
+  onMsg: (s: string) => void;
+  onErr: (s: string) => void;
+}) {
+  const [link, setLink] = useState("");
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const groups = data.managedGroups;
+
+  return (
+    <div className="space-y-4">
+      <Card
+        title="Add group / channel"
+        subtitle="লিংক বা @username পেস্ট করুন — পাবলিক চ্যানেল সরাসরি অ্যাড, প্রাইভেট ইনভাইটে বট অ্যাড করতে হবে"
+      >
+        <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+          <Field label="Paste link / @username / chat id" hint="https://t.me/mychannel · @mychannel · https://t.me/+xxxx · -100…">
+            <Input
+              className={inputCls}
+              placeholder="https://t.me/yourgroup or @channel"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+            />
+          </Field>
+          <Field label="Title (optional)">
+            <Input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Display name" />
+          </Field>
+          <div className="flex items-end gap-2">
+            <Button
+              className="bg-sky-500 text-slate-950"
+              disabled={busy || !link.trim()}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const res = await tgAdminAddGroup({
+                    data: { password, link: link.trim(), title: title.trim() || undefined },
+                  });
+                  onSaved(res.store);
+                  onMsg(res.message);
+                  setLink("");
+                  setTitle("");
+                } catch (e) {
+                  onErr(e instanceof Error ? e.message : "add failed");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Add
+            </Button>
+            <Button
+              variant="outline"
+              className="border-white/15"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const res = await tgAdminSyncGroups({ data: { password } });
+                  onSaved(res.store);
+                  onMsg(`Synced ${res.updated} group(s)`);
+                } catch (e) {
+                  onErr(e instanceof Error ? e.message : "sync failed");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Sync
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Managed groups & channels" subtitle={`${groups.filter((g) => g.isActive).length} active · ${groups.length} total`}>
+        <div className="overflow-x-auto rounded-xl border border-white/10">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-white/5 text-xs text-slate-400">
+              <tr>
+                <th className="px-3 py-2 text-left">Title</th>
+                <th className="px-3 py-2 text-left">Type</th>
+                <th className="px-3 py-2 text-left">Chat ID</th>
+                <th className="px-3 py-2 text-left">Link</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((g) => (
+                <tr key={g.chatId} className="border-t border-white/5">
+                  <td className="px-3 py-2 text-white">{g.title}</td>
+                  <td className="px-3 py-2 text-xs text-slate-400">{g.type}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{g.chatId}</td>
+                  <td className="px-3 py-2 text-xs">
+                    {g.inviteLink || (g.username ? `https://t.me/${g.username}` : "—")}
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {g.pending ? (
+                      <span className="text-amber-300">Pending — add bot</span>
+                    ) : g.isActive ? (
+                      <span className="text-emerald-300">Active</span>
+                    ) : (
+                      <span className="text-slate-500">Off</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      {!g.pending && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-white/15"
+                          onClick={async () =>
+                            onSaved(
+                              await tgAdminToggleGroup({
+                                data: { password, chatId: g.chatId, isActive: !g.isActive },
+                              }),
+                            )
+                          }
+                        >
+                          {g.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-rose-500/40 text-rose-300"
+                        onClick={async () =>
+                          onSaved(await tgAdminRemoveGroup({ data: { password, chatId: g.chatId } }))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!groups.length && (
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
+                    No groups yet — paste a link above
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>

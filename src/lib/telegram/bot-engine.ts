@@ -227,11 +227,13 @@ export async function processTelegramUpdate(update: TgUpdate) {
             type: ev.chat.type,
             addedByUserId: adder,
             isActive: true,
+            pending: false,
             createdAt: new Date().toISOString(),
           };
           d.managedGroups.push(g);
         } else {
           g.isActive = true;
+          g.pending = false;
           g.title = ev.chat.title || g.title;
           g.addedByUserId = adder;
         }

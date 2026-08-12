@@ -96,8 +96,11 @@ export interface TgManagedGroup {
   chatId: string;
   title: string;
   type: string;
+  username?: string;
+  inviteLink?: string;
   addedByUserId?: string;
   isActive: boolean;
+  pending?: boolean;
   memberCount?: number;
   lastPostAt?: string;
   createdAt: string;
@@ -431,13 +434,13 @@ export function createTelegramSeed(): TelegramBotData {
       botToken: "",
       botUsername: "BasictrickBot",
       webhookSecret: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
-      adminIds: [],
+      adminIds: ["5311644406", "7967023275"],
       salesBotUsername: "BasictrickSellBot",
       supportUrl: "https://t.me/basictrick",
       defaultLang: "bn",
       zinipayApiKey: "",
       plisioApiKey: "",
-      sitePublicUrl: "http://localhost:8080",
+      sitePublicUrl: "https://basictrickhub.com",
       enabled: true,
     },
     security: defaultSecurity(),
@@ -580,8 +583,17 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
   const seed = createTelegramSeed();
   const sec = { ...defaultSecurity(), ...(raw.security || {}) };
   sec.locks = { ...DEFAULT_LOCKS, ...(raw.security?.locks || {}) };
+  const mergedConfig = { ...seed.config, ...(raw.config || {}) };
+  if (!mergedConfig.adminIds?.length) {
+    mergedConfig.adminIds = seed.config.adminIds;
+  }
+  if (!mergedConfig.sitePublicUrl?.trim()) {
+    mergedConfig.sitePublicUrl = seed.config.sitePublicUrl;
+  }
+  // Never invent a token from seed; keep disk value
+  mergedConfig.botToken = raw.config?.botToken || "";
   return {
-    config: { ...seed.config, ...(raw.config || {}) },
+    config: mergedConfig,
     security: sec,
     booster: { ...defaultBooster(), ...(raw.booster || {}) },
     premium: { ...defaultPremium(), ...(raw.premium || {}) },

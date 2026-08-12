@@ -1,0 +1,30 @@
+---
+description: Basictrick Telegram bot production config (no secrets in git)
+alwaysApply: true
+---
+
+# Telegram Omni — production memory
+
+## Live site
+- Public HTTPS: `https://basictrickhub.com`
+- Admin: `https://basictrickhub.com/admin/telegram`
+- Admin password env: `ADMIN_PASSWORD` (default `basictrick-admin`)
+- Webhook path: `/api/telegram/webhook?secret=<webhookSecret from data/telegram-bot.json>`
+
+## Admins (Telegram user IDs)
+- `5311644406`
+- `7967023275`
+
+## Secrets (NEVER commit to GitHub)
+- Bot token lives only in VPS `data/telegram-bot.json` (or Admin → Connect UI)
+- Do not paste bot tokens into repo files, `.env.example`, or commits
+- If a token was exposed in chat, rotate via @BotFather `/revoke`
+
+## Groups / channels
+- Admin → **Groups** tab: paste `https://t.me/...`, `@username`, chat id, or invite link
+- Private invites stay Pending until the bot is added as admin, then Sync / my_chat_member activates them
+
+## Deploy
+- Repo: `https://github.com/abexpoit-blip/basictrickhub`
+- VPS app: `/var/www/basictrickhub`, PM2 `basictrickhub`, port `3017`
+- Nginx Docker proxy target: `http://172.17.0.1:3017`

@@ -180,6 +180,39 @@ export const tgAdminMarkPaid = createServerFn({ method: "POST" })
     return markOrderPaid(data.orderId);
   });
 
+export const tgAdminAddGroup = createServerFn({ method: "POST" })
+  .validator((d: { password: string; link: string; title?: string }) => d)
+  .handler(async ({ data }) => {
+    assertAdmin(data.password);
+    const { addGroupByLink } = await import("./groups");
+    return addGroupByLink(data.link, data.title);
+  });
+
+export const tgAdminSyncGroups = createServerFn({ method: "POST" })
+  .validator((d: { password: string }) => d)
+  .handler(async ({ data }) => {
+    assertAdmin(data.password);
+    const { syncManagedGroups } = await import("./groups");
+    return syncManagedGroups();
+  });
+
+export const tgAdminRemoveGroup = createServerFn({ method: "POST" })
+  .validator((d: { password: string; chatId: string }) => d)
+  .handler(async ({ data }) => {
+    assertAdmin(data.password);
+    const { removeManagedGroup } = await import("./groups");
+    return removeManagedGroup(data.chatId);
+  });
+
+export const tgAdminToggleGroup = createServerFn({ method: "POST" })
+  .validator((d: { password: string; chatId: string; isActive: boolean }) => d)
+  .handler(async ({ data }) => {
+    assertAdmin(data.password);
+    const { setManagedGroupActive } = await import("./groups");
+    return setManagedGroupActive(data.chatId, data.isActive);
+  });
+
+
 export const tgAdminMemberAction = createServerFn({ method: "POST" })
   .validator(
     (d: {
