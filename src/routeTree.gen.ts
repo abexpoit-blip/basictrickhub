@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as LicenseRouteImport } from './routes/license'
 import { Route as MethodRouteImport } from './routes/method'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -31,7 +30,6 @@ import { Route as ToolsFacebookQuickLinksRouteImport } from './routes/tools.face
 import { Route as ToolsFindFacebookIdRouteImport } from './routes/tools.find-facebook-id'
 import { Route as ApiAccessValidateRouteImport } from './routes/api.access.validate'
 import { Route as ApiExtensionDownloadRouteImport } from './routes/api.extension.download'
-import { Route as ApiExtensionLicenseRouteImport } from './routes/api.extension.license'
 import { Route as ApiPaymentsZinipayRouteImport } from './routes/api.payments.zinipay'
 import { Route as ApiTelegramWebhookRouteImport } from './routes/api.telegram.webhook'
 import { Route as ApiPaymentsPlisioWebhookRouteImport } from './routes/api.payments.plisio.webhook'
@@ -45,11 +43,6 @@ const IndexRoute = IndexRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LicenseRoute = LicenseRouteImport.update({
-  id: '/license',
-  path: '/license',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MethodRoute = MethodRouteImport.update({
@@ -148,11 +141,6 @@ const ApiExtensionDownloadRoute = ApiExtensionDownloadRouteImport.update({
   path: '/api/extension/download',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiExtensionLicenseRoute = ApiExtensionLicenseRouteImport.update({
-  id: '/api/extension/license',
-  path: '/api/extension/license',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPaymentsZinipayRoute = ApiPaymentsZinipayRouteImport.update({
   id: '/api/payments/zinipay',
   path: '/api/payments/zinipay',
@@ -179,7 +167,6 @@ const ApiPaymentsZinipayWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
-  '/license': typeof LicenseRoute
   '/method': typeof MethodRouteWithChildren
   '/shop': typeof ShopRoute
   '/admin/telegram': typeof AdminTelegramRoute
@@ -199,7 +186,6 @@ export interface FileRoutesByFullPath {
   '/tools/': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
   '/api/extension/download': typeof ApiExtensionDownloadRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
@@ -208,7 +194,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
-  '/license': typeof LicenseRoute
   '/method': typeof MethodRouteWithChildren
   '/shop': typeof ShopRoute
   '/admin/telegram': typeof AdminTelegramRoute
@@ -228,7 +213,6 @@ export interface FileRoutesByTo {
   '/tools': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
   '/api/extension/download': typeof ApiExtensionDownloadRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
@@ -238,7 +222,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
-  '/license': typeof LicenseRoute
   '/method': typeof MethodRouteWithChildren
   '/shop': typeof ShopRoute
   '/admin/telegram': typeof AdminTelegramRoute
@@ -258,7 +241,6 @@ export interface FileRoutesById {
   '/tools/': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
   '/api/extension/download': typeof ApiExtensionDownloadRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
@@ -269,7 +251,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/contact'
-    | '/license'
     | '/method'
     | '/shop'
     | '/admin/telegram'
@@ -289,7 +270,6 @@ export interface FileRouteTypes {
     | '/tools/'
     | '/api/access/validate'
     | '/api/extension/download'
-    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
     | '/api/payments/plisio/webhook'
@@ -298,7 +278,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contact'
-    | '/license'
     | '/method'
     | '/shop'
     | '/admin/telegram'
@@ -318,7 +297,6 @@ export interface FileRouteTypes {
     | '/tools'
     | '/api/access/validate'
     | '/api/extension/download'
-    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
     | '/api/payments/plisio/webhook'
@@ -327,7 +305,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/contact'
-    | '/license'
     | '/method'
     | '/shop'
     | '/admin/telegram'
@@ -347,7 +324,6 @@ export interface FileRouteTypes {
     | '/tools/'
     | '/api/access/validate'
     | '/api/extension/download'
-    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
     | '/api/payments/plisio/webhook'
@@ -357,7 +333,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContactRoute: typeof ContactRoute
-  LicenseRoute: typeof LicenseRoute
   MethodRoute: typeof MethodRouteWithChildren
   ShopRoute: typeof ShopRoute
   AdminTelegramRoute: typeof AdminTelegramRoute
@@ -375,7 +350,6 @@ export interface RootRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   ToolsIndexRoute: typeof ToolsIndexRoute
   ApiExtensionDownloadRoute: typeof ApiExtensionDownloadRoute
-  ApiExtensionLicenseRoute: typeof ApiExtensionLicenseRoute
   ApiPaymentsZinipayRoute: typeof ApiPaymentsZinipayRouteWithChildren
   ApiTelegramWebhookRoute: typeof ApiTelegramWebhookRoute
   ApiPaymentsPlisioWebhookRoute: typeof ApiPaymentsPlisioWebhookRoute
@@ -395,13 +369,6 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/license': {
-      id: '/license'
-      path: '/license'
-      fullPath: '/license'
-      preLoaderRoute: typeof LicenseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/method': {
@@ -537,13 +504,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExtensionDownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/extension/license': {
-      id: '/api/extension/license'
-      path: '/api/extension/license'
-      fullPath: '/api/extension/license'
-      preLoaderRoute: typeof ApiExtensionLicenseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/payments/zinipay': {
       id: '/api/payments/zinipay'
       path: '/api/payments/zinipay'
@@ -612,7 +572,6 @@ const ApiPaymentsZinipayRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContactRoute: ContactRoute,
-  LicenseRoute: LicenseRoute,
   MethodRoute: MethodRouteWithChildren,
   ShopRoute: ShopRoute,
   AdminTelegramRoute: AdminTelegramRoute,
@@ -630,7 +589,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   ToolsIndexRoute: ToolsIndexRoute,
   ApiExtensionDownloadRoute: ApiExtensionDownloadRoute,
-  ApiExtensionLicenseRoute: ApiExtensionLicenseRoute,
   ApiPaymentsZinipayRoute: ApiPaymentsZinipayRouteWithChildren,
   ApiTelegramWebhookRoute: ApiTelegramWebhookRoute,
   ApiPaymentsPlisioWebhookRoute: ApiPaymentsPlisioWebhookRoute,

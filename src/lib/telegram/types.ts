@@ -518,15 +518,15 @@ export function communityKeywordRules(): TgKeywordRule[] {
     "🔥 Buy ID / VPN from Basictrick official seller\n\n✅ Automatic payment\n⚡ Instant delivery\n\n👉 https://t.me/btidsellerbot\nAdmin: https://t.me/Basictrickadmin\nGroup: https://t.me/basictrick";
   return [
     {
-      id: "kw-license",
-      keywords: ["license", "licence", "লাইসেন্স", "post booster", "fb boost", "fb reset", "extension key"],
-      title: "FB Tools License",
+      id: "kw-fb-tools",
+      keywords: ["post booster", "fb boost", "fb reset", "boost tools", "reset tools", "extension", "chrome extension"],
+      title: "FB Tools",
       replyBn:
-        "🔑 License সেকশন:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) জয়েন: https://t.me/basictrick\n2) Download বা License চাপুন\nLicense = গ্রুপ ভেরিফাই করে ১টা কি (১০ ব্রাউজার)\n\n📦 https://basictrickhub.com/license",
+        "🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n📥 Download: https://basictrickhub.com/tools/fb-boost-tools\n🛠 সব টুলস: https://basictrickhub.com/tools",
       replyEn:
-        "🔑 License section:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) Join https://t.me/basictrick\n2) Download or License\nLicense verifies group, then 1 key (10 browsers)\n\n📦 https://basictrickhub.com/license",
-      buttonText: "Open License",
-      buttonUrl: "https://basictrickhub.com/license",
+        "🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n📥 Download: https://basictrickhub.com/tools/fb-boost-tools\n🛠 All tools: https://basictrickhub.com/tools",
+      buttonText: "Open Tools",
+      buttonUrl: "https://basictrickhub.com/tools/fb-boost-tools",
       isActive: true,
       priority: 8,
     },
@@ -743,7 +743,7 @@ export function defaultLinkButtons(): TgLinkButton[] {
       category: "tools",
       title: "FB Boost Tools",
       buttonText: "📦 FB Boost Tools",
-      url: "https://basictrickhub.com/license",
+      url: "https://basictrickhub.com/tools/fb-boost-tools",
       isActive: true,
       sortOrder: 2,
     },
@@ -869,17 +869,17 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
     },
     keywords: (() => {
       const kws = applyCommunityPack ? communityKeywordRules() : raw.keywords?.length ? raw.keywords : seed.keywords;
-      if (!kws.some((k) => k.id === "kw-license")) {
+      if (!kws.some((k) => k.id === "kw-fb-tools")) {
         kws.push({
-          id: "kw-license",
-          keywords: ["license", "licence", "লাইসেন্স", "post booster", "fb boost", "fb reset", "extension key"],
-          title: "FB Tools License",
+          id: "kw-fb-tools",
+          keywords: ["post booster", "fb boost", "fb reset", "boost tools", "reset tools", "extension", "chrome extension"],
+          title: "FB Tools",
           replyBn:
-            "🔑 License সেকশন:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) জয়েন: https://t.me/basictrick\n2) Download বা License চাপুন\nLicense = গ্রুপ ভেরিফাই করে ১টা কি (১০ ব্রাউজার)\n\n📦 https://basictrickhub.com/license",
+            "🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n📥 Download: https://basictrickhub.com/tools/fb-boost-tools\n🛠 সব টুলস: https://basictrickhub.com/tools",
           replyEn:
-            "🔑 License section:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) Join https://t.me/basictrick\n2) Download or License\nLicense verifies group, then 1 key (10 browsers)\n\n📦 https://basictrickhub.com/license",
-          buttonText: "Open License",
-          buttonUrl: "https://basictrickhub.com/license",
+            "🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n📥 Download: https://basictrickhub.com/tools/fb-boost-tools\n🛠 All tools: https://basictrickhub.com/tools",
+          buttonText: "Open Tools",
+          buttonUrl: "https://basictrickhub.com/tools/fb-boost-tools",
           isActive: true,
           priority: 8,
         });
@@ -896,7 +896,7 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
           category: "tools",
           title: "FB Boost Tools",
           buttonText: "📦 FB Boost Tools",
-          url: "https://basictrickhub.com/license",
+          url: "https://basictrickhub.com/tools/fb-boost-tools",
           isActive: true,
           sortOrder: 2,
         });

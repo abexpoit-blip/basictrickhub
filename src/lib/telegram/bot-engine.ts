@@ -1,4 +1,4 @@
-import { sendExtensionLicense, sendLicenseHub, sendToolPanel, sendJoinVerify, parseToolKind, unbindLicenseDevice } from "./extension-license";
+import { parseToolKind, sendToolDownload } from "./tool-downloads";
 import { buildSmartReply } from "./ai-brain";
 import {
   computeAiUnlock,
@@ -8,6 +8,7 @@ import {
   premiumLockedMessage,
   refreshAiUnlock,
   sendBoostInvite,
+  sendCommunityJoinVerify,
 } from "./booster";
 import { securityMsg } from "./branding";
 import { matchKeyword } from "./keywords";
@@ -218,8 +219,7 @@ function userHelpText(data: TelegramBotData, lang: string) {
       `❝ পরিশ্রমই আসল শর্টকাট। ❞\n` +
       `❝ Learn. Build. Earn. ❞\n` +
       `❝ এক কমিউনিটি — হাজার সুযোগ। ❞\n\n` +
-      `▶️ বট খুললেই মেনু চলে আসে। নিচের বাটন ব্যবহার করুন।\n` +
-      `লাইসেন্সের জন্য @basictrick এ /verify লিখুন।`
+      `▶️ বট খুললেই মেনু চলে আসে। নিচের বাটন ব্যবহার করুন।`
     );
   }
   return (
@@ -227,8 +227,7 @@ function userHelpText(data: TelegramBotData, lang: string) {
     `❝ Hard work is the real shortcut. ❞\n` +
     `❝ Learn. Build. Earn. ❞\n` +
     `❝ One community — a thousand doors. ❞\n\n` +
-    `Open the bot — the menu appears immediately.\n` +
-    `For a license, type /verify in @basictrick.`
+    `Open the bot — the menu appears immediately.`
   );
 }
 
@@ -258,14 +257,14 @@ function adminHelpText(lang: string) {
     return (
       `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
       `মডারেশন:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
-      `সিকিউরিটি:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n/resetlicense <id>\n\n` +
+      `সিকিউরিটি:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
       `ইউজার মেনুতে ফিরতে: /start`
     );
   }
   return (
     `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
     `Moderation:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
-    `Security:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n/resetlicense <id>\n\n` +
+    `Security:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
     `Back to user menu: /start`
   );
 }
@@ -663,29 +662,12 @@ export async function processTelegramUpdate(update: TgUpdate) {
     }
     if (payload.startsWith("menu:tool:") && chatId) {
       const tool = parseToolKind(payload.split(":")[2]);
-      if (tool) await sendToolPanel(token, chatId, data, tool);
+      if (tool) await sendToolDownload(token, chatId, data, tool);
       return { ok: true };
     }
-    if (payload === "menu:license" && chatId) {
-      await sendLicenseHub(token, chatId, data);
-      return { ok: true };
-    }
-    if (payload.startsWith("lic:issue:") && chatId) {
-      const tool = parseToolKind(payload.split(":")[2]);
-      if (tool) {
-        await sendExtensionLicense(token, chatId, data, String(cb.from.id), cb.from.username, tool);
-      }
-      return { ok: true };
-    }
-    if (payload.startsWith("lic:info:") && chatId) {
-      const tool = parseToolKind(payload.split(":")[2]);
-      if (tool) await sendToolPanel(token, chatId, data, tool);
-      return { ok: true };
-    }
-    if (payload === "join:verify" || payload.startsWith("join:verify:") ) {
+    if (payload === "join:verify") {
       if (!chatId) return { ok: true };
-      const tool = payload === "join:verify" ? null : parseToolKind(payload.split(":")[2]);
-      await sendJoinVerify(token, chatId, data, String(cb.from.id), cb.from.username, tool);
+      await sendCommunityJoinVerify(token, chatId, data, String(cb.from.id));
       return { ok: true };
     }
 
@@ -1299,44 +1281,7 @@ export async function processTelegramUpdate(update: TgUpdate) {
 
   // Public commands
   if (cmd === "/start" || cmd === "/help") {
-    const startTool = parseToolKind(args[0]);
-    if (cmd === "/start" && startTool) {
-      await sendExtensionLicense(token, chatId, fresh, userId, msg.from.username, startTool);
-      return { ok: true };
-    }
     await sendUserHome(token, chatId, fresh, admin, true);
-    return { ok: true };
-  }
-
-  if (cmd === "/verify") {
-    if (isGroup) {
-      if (isFreeCommunityChat(msg.chat, fresh)) {
-        await markJoined(userId, String(chatId));
-        const lang = fresh.config.defaultLang;
-        await tgApi(token, "sendMessage", {
-          chat_id: chatId,
-          text:
-            lang === "bn"
-              ? "✅ জয়েন ভেরিফাইড। লাইসেন্স Inbox এ পাঠানো হলো — না পেলে বটে License চাপুন।"
-              : "✅ Join verified. License sent in bot inbox — or tap License there.",
-        });
-        try {
-          await sendLicenseHub(token, Number(userId), await getTelegramData());
-        } catch {
-          /* user may need to open the bot once */
-        }
-      } else {
-        await tgApi(token, "sendMessage", {
-          chat_id: chatId,
-          text:
-            fresh.config.defaultLang === "bn"
-              ? "এই গ্রুপ নয়। @basictrick এ গিয়ে /verify লিখুন।"
-              : "Wrong group. Type /verify in @basictrick.",
-        });
-      }
-      return { ok: true };
-    }
-    await sendJoinVerify(token, chatId, fresh, userId, msg.from.username, parseToolKind(args[0]));
     return { ok: true };
   }
 
@@ -1395,43 +1340,6 @@ export async function processTelegramUpdate(update: TgUpdate) {
 
   if (cmd === "/boost") {
     await sendBoostInvite(token, chatId, fresh, userId);
-    return { ok: true };
-  }
-
-  if (cmd === "/license" || cmd === "/mylicense") {
-    const tool = parseToolKind(args[0]);
-    if (tool) {
-      await sendExtensionLicense(token, chatId, fresh, userId, msg.from.username, tool);
-    } else {
-      await sendLicenseHub(token, chatId, fresh);
-    }
-    return { ok: true };
-  }
-
-  if (cmd === "/resetlicense") {
-    if (!admin) {
-      await tgApi(token, "sendMessage", {
-        chat_id: chatId,
-        text: fresh.config.defaultLang === "bn" ? "⛔ শুধু Admin।" : "⛔ Admins only.",
-      });
-      return { ok: true };
-    }
-    const target = args[0] || "";
-    if (!/^\d+$/.test(target)) {
-      await tgApi(token, "sendMessage", {
-        chat_id: chatId,
-        text: "Usage: /resetlicense <telegramUserId> [boost|reset]",
-      });
-      return { ok: true };
-    }
-    const tool = parseToolKind(args[1]) || undefined;
-    const res = await unbindLicenseDevice(target, tool);
-    await tgApi(token, "sendMessage", {
-      chat_id: chatId,
-      text: res.found
-        ? `✅ Browser slots cleared for ${target}. They can bind up to 10 browsers again.\nKey: ${res.license?.key || "n/a"}`
-        : `No active license for ${target}.`,
-    });
     return { ok: true };
   }
 

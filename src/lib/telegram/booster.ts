@@ -1,5 +1,5 @@
 import { fillTemplate } from "./security";
-import { isBotAdmin, tgApi } from "./moderation";
+import { tgApi } from "./moderation";
 import { getTelegramData, updateTelegramData, pushTgLog } from "./store";
 import type { TgMember, TelegramBotData } from "./types";
 
@@ -141,11 +141,6 @@ export async function checkFreeGroupMembership(
   const uid = Number(userId);
   if (!Number.isFinite(uid)) return { joined: false, error: "Invalid user id" };
 
-  if (isBotAdmin(userId, data)) {
-    await markJoined(userId);
-    return { joined: true, status: "bot-admin" };
-  }
-
   let lastError = "";
   let inaccessible = false;
   let leftOfficial = false;
@@ -277,6 +272,42 @@ export async function sendBoostInvite(
     return d;
   });
   await pushTgLog("info", `Boost invite → ${userId}`);
+}
+
+/** AI / community join verify only — no license. */
+export async function sendCommunityJoinVerify(
+  token: string,
+  chatId: number,
+  data: TelegramBotData,
+  userId: string,
+) {
+  const lang = data.config.defaultLang;
+  const check = await checkFreeGroupMembership(token, await getTelegramData(), userId);
+  if (check.joined) {
+    await refreshAiUnlock(userId);
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text:
+        lang === "bn"
+          ? `✅ @basictrick জয়েন ভেরিফাইড\nAI স্ট্যাটাস: /aistatus`
+          : `✅ @basictrick join verified\nAI status: /aistatus`,
+    });
+    return;
+  }
+  const invite = data.booster.freeGroupInvite || "https://t.me/basictrick";
+  await tgApi(token, "sendMessage", {
+    chat_id: chatId,
+    text:
+      lang === "bn"
+        ? `❌ এখনো ভেরিফাই হয়নি\n@basictrick চ্যানেলে জয়েন করুন, তারপর আবার Verify চাপুন।\n\n👉 ${invite}`
+        : `❌ Not verified yet\nJoin @basictrick, then tap Verify again.\n\n👉 ${invite}`,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "⚡ Join @basictrick", url: invite }],
+        [{ text: "✅ Verify", callback_data: "join:verify" }],
+      ],
+    },
+  });
 }
 
 export async function refreshAiUnlock(userId: string) {
