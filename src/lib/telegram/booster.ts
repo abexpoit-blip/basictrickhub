@@ -26,7 +26,7 @@ export async function isMemberOfFreeGroup(
     }
     return ok;
   } catch {
-    return false;
+    return !!data.members.find((m) => m.telegramUserId === userId)?.joinedFreeGroup;
   }
 }
 

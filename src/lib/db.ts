@@ -78,6 +78,20 @@ export async function getStore(): Promise<StoreData> {
     }
   });
 
+  for (const st of seed.tools) {
+    const idx = store.tools.findIndex((t) => t.id === st.id || t.slug === st.slug);
+    if (idx < 0) {
+      store.tools.push(st);
+      dirty = true;
+    } else if (st.id === "tool-post-booster" || st.id === "tool-fb-reset") {
+      const cur = store.tools[idx];
+      if (cur.downloadUrl !== st.downloadUrl || cur.name !== st.name || cur.slug !== st.slug) {
+        store.tools[idx] = { ...cur, ...st, createdAt: cur.createdAt };
+        dirty = true;
+      }
+    }
+  }
+
   if (dirty) await saveStore(store);
   return store;
 }

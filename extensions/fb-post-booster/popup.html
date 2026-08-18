@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title"></title>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="bt-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div class="sticky-top">
+    <div class="header">
+      <div class="header-logo">
+        <img src="bt-logo.png" width="46" height="46" alt="Basictrick">
+      </div>
+      <div class="header-info">
+        <div class="header-title" id="app-title"></div>
+        <a class="header-sub" id="app-sub" href="https://t.me/basictrick" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 13.93l-2.95-.924c-.64-.203-.654-.64.136-.953l11.57-4.461c.537-.194 1.006.131.326.656z" />
+          </svg>
+          Basictrick
+        </a>
+      </div>
+      <div class="header-badge">BT</div>
+    </div>
+
+    <div id="dev-banner">
+      <div id="dev-name"></div>
+      <a id="dev-link" href="https://t.me/basictrick" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 13.93l-2.95-.924c-.64-.203-.654-.64.136-.953l11.57-4.461c.537-.194 1.006.131.326.656z" />
+        </svg>
+        <span id="dev-btn-text"></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="two-col-grid">
+
+    <div class="col-left">
+
+      <div class="section" id="mediaSection">
+        <div class="section-label">Account &amp; Target</div>
+
+        <div class="field">
+          <div class="field-key">AD Id</div>
+          <input id="adAccountId" type="text" placeholder="AD ACCOUNT ID">
+        </div>
+
+        <div class="field">
+          <div class="field-key">Page Id</div>
+          <input id="pageId" type="text" placeholder="PAGE ID">
+        </div>
+
+        <div id="postIdField" class="field">
+          <div class="field-key">Post Id</div>
+          <input id="postId" type="text" placeholder="TARGET ID">
+        </div>
+
+        <div style="padding: 4px 10px 8px;">
+          <button type="button" id="autoCollectBtn" class="action-btn collect-btn">
+            🔗 Auto Collect from FB Tab
+          </button>
+        </div>
+
+        <div id="autoCollectField" style="display:none; padding: 4px 10px 8px;">
+          <button type="button" id="createPostBtn" class="action-btn collect-btn">
+            📝 Create Post
+          </button>
+          <div id="pageDropdown" style="display:none; position:absolute; z-index:999;
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:8px; min-width:260px; max-height:320px;
+            overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+          </div>
+        </div>
+
+        <div id="createPostSection" style="display:none; padding: 4px 10px 8px; flex-direction:column; gap:8px;">
+          <input type="file" id="mediaFile2" accept="image/*" style="display:none;">
+          <div id="mediaPreview2" style="font-size:11px; color:var(--cyan); display:none;"></div>
+          <textarea id="mediaCaption2" placeholder="Write caption (optional)..."
+            style="display:none; width:100%; padding:10px;
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:6px; color:var(--text); font-size:12px;
+            font-family:'IBM Plex Mono',monospace; resize:vertical;
+            min-height:80px; box-sizing:border-box;"></textarea>
+          <button type="button" id="mediaUploadBtn2" class="action-btn collect-btn"
+            style="display:none; width:100%;">
+            ⬆️ Upload & Create Post
+          </button>
+        </div>
+
+        <div id="mediaFieldWrap" style="display:none;">
+          <div class="field" style="flex-direction:column; padding:10px;">
+            <div style="display:flex;align-items:center;gap:12px;width:100%;">
+              <div class="field-key" style="color: #f472b6;">Media</div>
+              <div style="flex:1;">
+                <input type="file" id="mediaFile" accept="image/*,video/*,.mp4,.mov,.avi,.mkv,.webm" style="display:none;">
+                <button type="button" id="mediaSelectBtn" class="collect-btn" style="margin:0;width:100%;">
+                  📁 Select Photo / Video
+                </button>
+              </div>
+            </div>
+            <div id="mediaPreview" style="font-size:11px;color:var(--cyan);display:none;margin-top:4px;"></div>
+            <textarea id="mediaCaption" placeholder="Write caption (optional)..." style="display:none; width:100%; margin-top:8px; padding:10px;
+             background:var(--surface); border:1px solid var(--border);
+             border-radius:6px; color:var(--text); font-size:12px;
+             font-family:'IBM Plex Mono',monospace; resize:vertical; min-height:80px; box-sizing:border-box;"></textarea>
+            <button type="button" id="mediaUploadBtn" class="collect-btn" style="margin:8px 0 0 0;display:none;width:100%;">
+              ⬆️ Upload & Create Post
+            </button>
+          </div>
+        </div>
+
+        <div id="targetUrlField" class="field" style="display:none;">
+          <div class="field-key">Target URL</div>
+          <input id="targetUrl" type="text" placeholder="https://example.com">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Targeting</div>
+
+        <div class="field">
+          <div class="field-key">Gender</div>
+          <div class="gender-wrap">
+            <button type="button" class="gender-btn active" data-val="0">All</button>
+            <button type="button" class="gender-btn" data-val="1">Male</button>
+            <button type="button" class="gender-btn" data-val="2">Female</button>
+          </div>
+        </div>
+
+        <div id="dsaFields" style="display:none;">
+          <div class="field">
+            <div class="field-key" style="color:#03c9a8;">⚠️ EU Advertiser</div>
+            <input id="dsaAdvertiser" type="text" placeholder="Advertiser name">
+          </div>
+          <div class="field">
+            <div class="field-key" style="color:#0ce2be;">⚠️ EU Payer</div>
+            <input id="dsaPayer" type="text" placeholder="Payer name">
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-key">Age Range</div>
+          <input id="ageMin" type="number" placeholder="18" min="13" max="65" value="18" style="width:40%;">
+          <span style="color:var(--text-faint);font-size:12px;padding:0 6px;flex-shrink:0;">to</span>
+          <input id="ageMax" type="number" placeholder="65" min="13" max="65" value="65" style="width:40%;">
+        </div>
+
+        <div class="field country-field">
+          <div class="country-header">
+            <div class="field-key">Countries</div>
+            <div class="country-count" id="countryCount">0 selected</div>
+          </div>
+          <div class="country-body">
+            <div id="pinnedRow" style="display:none;">
+              <div style="font-size:9px;color:var(--dim);font-family:var(--mono);margin-bottom:6px;letter-spacing:.14em;">PINNED</div>
+              <div id="pinnedTags"></div>
+            </div>
+            <div class="country-search-row">
+              <input id="countrySearch" type="text" placeholder="Search country...">
+              <button type="button" class="btn-clear-all" id="clearCountries">Clear</button>
+            </div>
+            <div class="selected-tags" id="selectedTags"></div>
+            <div class="country-list" id="countryList" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <div class="col-right">
+
+      <div class="section">
+        <div class="section-label">Budget &amp; Schedule</div>
+
+        <div class="field">
+          <div class="field-key">CTA</div>
+          <select id="callToAction">
+            <option value="LEARN_MORE" selected>Learn More</option>
+            <option value="CONTACT_US">Contact Us</option>
+            <option value="GET_OFFER">Get Offer</option>
+            <option value="WATCH_MORE">Watch More</option>
+            <option value="ORDER_NOW">Order Now</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-key">Budget</div>
+          <input id="budget" type="number" placeholder="2" min="1" value="2">
+        </div>
+
+        <div class="field">
+          <div class="field-key">Currency</div>
+          <input id="currency" type="text" placeholder="USD" maxlength="5" value="USD">
+        </div>
+
+        <div class="field">
+          <div class="field-key">DAY</div>
+          <input id="duration" type="number" placeholder="1" min="1" value="1">
+        </div>
+
+        <div class="field">
+          <div class="field-key">Continuous</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;">
+            <input type="checkbox" id="runContinuous" style="width:16px;height:16px;cursor:pointer;">
+            <span style="font-size:12px;color:var(--muted);">Run until paused</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <div class="field-key">Goal</div>
+          <select id="goalSelect">
+            <option value="LANDING_PAGE_VIEWS">Landing Page View</option>
+            <option value="LINK_CLICKS">Link Click</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Proxy</div>
+
+        <div class="field">
+          <div class="field-key">Proxy</div>
+          <input id="proxyInput" type="text" placeholder="user:pass@host:port">
+        </div>
+
+        <div class="field">
+          <div class="field-key">Type</div>
+          <select id="proxyType">
+            <option value="http">HTTP</option>
+            <option value="socks5">SOCKS5</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-key">Status</div>
+          <div id="proxyStatus">not connected</div>
+          <button type="button" class="action-btn" id="connectBtn">CONNECT</button>
+          <button type="button" class="action-btn" id="disconnectBtn"
+            style="display:none;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#ef4444;">DISCONNECT</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Auth</div>
+        <div class="field token-row">
+          <div class="field-key">Token</div>
+          <input id="token" type="password" placeholder="Paste token or extract">
+          <button type="button" class="action-btn" id="extractBtn">EXTRACT</button>
+        </div>
+      </div>
+
+      <div id="status"></div>
+
+      <div class="submit-wrap">
+        <button type="button" id="submitBtn">🚀 Boost Post</button>
+      </div>
+
+    </div><!-- /col-right -->
+
+  </div><!-- /two-col-grid -->
+
+  <div id="approval-overlay" style="display:none;
+    position:fixed;inset:0;z-index:99999;
+    background:#000;
+    flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Outfit',sans-serif;text-align:center;padding:24px;">
+    <div id="approval-icon" style="font-size:54px;margin-bottom:14px;
+      filter:drop-shadow(0 0 20px rgba(176,38,255,0.6));">🔒</div>
+    <div id="approval-title" style="font-size:20px;font-weight:800;color:#f4f0ff;
+      margin-bottom:8px;">Checking...</div>
+    <div id="approval-msg" style="font-size:13px;color:#d46bff;
+      font-weight:600;max-width:260px;line-height:1.7;margin-bottom:20px;"></div>
+    <div id="approval-expiry" style="font-size:11px;color:#9b92b8;
+      font-family:monospace;margin-bottom:24px;"></div>
+    <a id="renew-btn" href="https://t.me/basictrickbot" style="display:none;text-decoration:none;
+      align-items:center;gap:8px;padding:13px 28px;
+      background:linear-gradient(90deg,#b026ff,#0ea5e9);
+      color:#041018;font-size:13px;font-weight:800;">
+      Renew License
+    </a>
+  </div>
+
+  <div id="approval-loading" style="
+    position:fixed;inset:0;z-index:99998;
+    background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Outfit',sans-serif;">
+    <div style="width:54px;height:54px;border-radius:50%;
+      border:4px solid rgba(255,255,255,0.10);
+      border-top-color:#b026ff;border-right-color:#0ea5e9;
+      animation:spin 1s linear infinite;margin-bottom:14px;"></div>
+    <div style="font-size:13px;font-weight:700;color:#d46bff;">
+      Verifying license...</div>
+    <style>@keyframes spin { to { transform: rotate(360deg) } }</style>
+  </div>
+
+  <div id="bt-license-gate">
+    <div class="bt-lic-card">
+      <img src="bt-logo.png" alt="Basictrick">
+      <h2>BASICTRICK</h2>
+      <p>FB Boost Tools — ৭ দিনের কি নিতে আগে <b>@basictrick</b> জয়েন করুন, বটে <b>License</b> চাপুন।<br>১টি কি = ১ ডিভাইসে ১০টা Chrome/browser।</p>
+      <input id="bt-license-input" type="text" placeholder="BT-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+      <div id="bt-license-err" class="bt-lic-err"></div>
+      <div class="bt-lic-actions">
+        <button type="button" class="bt-lic-primary" id="bt-license-activate">Activate</button>
+        <a class="bt-lic-ghost" id="bt-license-group" href="https://t.me/basictrick" target="_blank">Join public group</a>
+        <a class="bt-lic-ghost" id="bt-license-bot" href="https://t.me/basictrickbot" target="_blank">Get /license from bot</a>
+      </div>
+    </div>
+  </div>
+<script src="tornanirheda.js"></script>
+  <script src="tornanirexudi.js"></script>
+  <script src="tornanirkhalighor.js"></script>
+  <script src="abarotornanirexudi.js"></script>
+  <script src="bt-license-gate.js"></script>
+</body>
+</html>

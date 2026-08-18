@@ -19,7 +19,8 @@ async function ensure(): Promise<TelegramBotData> {
       !parsed.security?.floodMode ||
       !parsed.booster ||
       !parsed.ai ||
-      !parsed.premium;
+      !parsed.premium ||
+      !Array.isArray(parsed.extensionLicenses);
     if (needsPersist) {
       await writeFile(TG_PATH, JSON.stringify(migrated, null, 2), "utf8");
     }

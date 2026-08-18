@@ -22,6 +22,21 @@ export interface TgLinkButton {
   sortOrder: number;
 }
 
+export type ExtToolKind = "boost" | "reset";
+
+export interface TgExtensionLicense {
+  key: string;
+  tool?: ExtToolKind;
+  telegramUserId: string;
+  username?: string;
+  issuedAt: string;
+  expiresAt: string;
+  isActive: boolean;
+  deviceId?: string;
+  deviceIds?: string[];
+  deviceBoundAt?: string;
+}
+
 export type PunishMode = "warn" | "mute" | "tmute" | "kick" | "ban" | "tban" | "delete";
 
 export type LockKey =
@@ -293,6 +308,7 @@ export interface TelegramBotData {
   notes: TgNote[];
   products: TgStoreProduct[];
   linkButtons: TgLinkButton[];
+  extensionLicenses: TgExtensionLicense[];
   orders: TgOrder[];
   members: TgMember[];
   managedGroups: TgManagedGroup[];
@@ -502,6 +518,19 @@ export function communityKeywordRules(): TgKeywordRule[] {
     "🔥 Buy ID / VPN from Basictrick official seller\n\n✅ Automatic payment\n⚡ Instant delivery\n\n👉 https://t.me/btidsellerbot\nAdmin: https://t.me/Basictrickadmin\nGroup: https://t.me/basictrick";
   return [
     {
+      id: "kw-license",
+      keywords: ["license", "licence", "লাইসেন্স", "post booster", "fb boost", "fb reset", "extension key"],
+      title: "FB Tools License",
+      replyBn:
+        "🔑 License সেকশন:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) জয়েন: https://t.me/basictrick\n2) Download বা License চাপুন\nLicense = গ্রুপ ভেরিফাই করে ১টা কি (১০ ব্রাউজার)\n\n📦 https://basictrickhub.com/license",
+      replyEn:
+        "🔑 License section:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) Join https://t.me/basictrick\n2) Download or License\nLicense verifies group, then 1 key (10 browsers)\n\n📦 https://basictrickhub.com/license",
+      buttonText: "Open License",
+      buttonUrl: "https://basictrickhub.com/license",
+      isActive: true,
+      priority: 8,
+    },
+    {
       id: "kw-id-vpn-seller",
       keywords: [
         "facebook id",
@@ -673,6 +702,7 @@ export function createTelegramSeed(): TelegramBotData {
       },
     ],
     linkButtons: defaultLinkButtons(),
+    extensionLicenses: [],
     orders: [],
     members: [],
     managedGroups: [],
@@ -707,6 +737,15 @@ export function defaultLinkButtons(): TgLinkButton[] {
       url: "https://basictrickhub.com/tools",
       isActive: true,
       sortOrder: 1,
+    },
+    {
+      id: "link-booster-ext",
+      category: "tools",
+      title: "FB Boost Tools",
+      buttonText: "📦 FB Boost Tools",
+      url: "https://basictrickhub.com/license",
+      isActive: true,
+      sortOrder: 2,
     },
     {
       id: "link-shortner-1",
@@ -828,10 +867,43 @@ export function migrateTelegramData(raw: Partial<TelegramBotData>): TelegramBotD
           ? raw.ai.intents
           : seed.ai.intents,
     },
-    keywords: applyCommunityPack ? communityKeywordRules() : raw.keywords?.length ? raw.keywords : seed.keywords,
+    keywords: (() => {
+      const kws = applyCommunityPack ? communityKeywordRules() : raw.keywords?.length ? raw.keywords : seed.keywords;
+      if (!kws.some((k) => k.id === "kw-license")) {
+        kws.push({
+          id: "kw-license",
+          keywords: ["license", "licence", "লাইসেন্স", "post booster", "fb boost", "fb reset", "extension key"],
+          title: "FB Tools License",
+          replyBn:
+            "🔑 License সেকশন:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) জয়েন: https://t.me/basictrick\n2) Download বা License চাপুন\nLicense = গ্রুপ ভেরিফাই করে ১টা কি (১০ ব্রাউজার)\n\n📦 https://basictrickhub.com/license",
+          replyEn:
+            "🔑 License section:\n🚀 FB Boost Tools\n♻️ FB Reset Tools\n\n1) Join https://t.me/basictrick\n2) Download or License\nLicense verifies group, then 1 key (10 browsers)\n\n📦 https://basictrickhub.com/license",
+          buttonText: "Open License",
+          buttonUrl: "https://basictrickhub.com/license",
+          isActive: true,
+          priority: 8,
+        });
+      }
+      return kws;
+    })(),
     notes: applyCommunityPack ? seed.notes : raw.notes?.length ? raw.notes : seed.notes,
     products: raw.products?.length ? raw.products : seed.products,
-    linkButtons: raw.linkButtons?.length ? raw.linkButtons : seed.linkButtons,
+    linkButtons: (() => {
+      const buttons = raw.linkButtons?.length ? raw.linkButtons : seed.linkButtons;
+      if (!buttons.some((b) => b.id === "link-booster-ext")) {
+        buttons.push({
+          id: "link-booster-ext",
+          category: "tools",
+          title: "FB Boost Tools",
+          buttonText: "📦 FB Boost Tools",
+          url: "https://basictrickhub.com/license",
+          isActive: true,
+          sortOrder: 2,
+        });
+      }
+      return buttons;
+    })(),
+    extensionLicenses: Array.isArray(raw.extensionLicenses) ? raw.extensionLicenses : [],
     orders: raw.orders || [],
     members: (raw.members || []).map((m) => ({
       ...m,

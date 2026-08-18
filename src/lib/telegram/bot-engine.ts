@@ -1,3 +1,4 @@
+import { sendExtensionLicense, sendLicenseHub, sendToolPanel, parseToolKind, unbindLicenseDevice } from "./extension-license";
 import { buildSmartReply } from "./ai-brain";
 import {
   computeAiUnlock,
@@ -164,30 +165,42 @@ async function announceProfileChanges(
   }
 }
 
+function startReplyHits(text: string) {
+  const t = text.trim().toLowerCase().replace(/\s+/g, " ");
+  return (
+    t === "start" ||
+    t === "▶️ start" ||
+    t === "start bot" ||
+    t === "স্টার্ট" ||
+    t === "বট স্টার্ট"
+  );
+}
+
 function userMenuKeyboard(data: TelegramBotData, isAdmin: boolean) {
+  const seller = data.config.salesBotUsername.replace("@", "");
   const rows: { text: string; url?: string; callback_data?: string }[][] = [
+    [{ text: "▶️ Start", callback_data: "menu:start" }],
     [
-      { text: "🛒 Shop", callback_data: "menu:shop" },
-      { text: "⭐ VIP", callback_data: "menu:vip" },
+      { text: "🚀 FB Boost Tools", callback_data: "menu:tool:boost" },
+      { text: "🔄 FB Reset Tools", callback_data: "menu:tool:reset" },
     ],
     [
-      { text: "📘 Method", callback_data: "menu:method" },
-      { text: "🛠 Tools", callback_data: "menu:tools" },
+      { text: "🛍️ Shop", callback_data: "menu:shop" },
+      { text: "💎 VIP", callback_data: "menu:vip" },
     ],
     [
-      { text: "🚀 Boost", callback_data: "menu:boost" },
-      { text: "✦ AI Status", callback_data: "menu:aistatus" },
+      { text: "📚 Method", callback_data: "menu:method" },
+      { text: "🧰 Tools", callback_data: "menu:tools" },
     ],
     [
-      {
-        text: "🛒 Official Sell Bot",
-        url: `https://t.me/${data.config.salesBotUsername.replace("@", "")}`,
-      },
+      { text: "⚡ Community", callback_data: "menu:boost" },
+      { text: "🧠 AI Status", callback_data: "menu:aistatus" },
     ],
-    [{ text: "👤 Contact Admin", url: data.config.supportUrl }],
+    [{ text: "🏷️ Official Seller", url: `https://t.me/${seller}` }],
+    [{ text: "🛟 Contact Admin", url: data.config.supportUrl }],
   ];
   if (isAdmin) {
-    rows.push([{ text: "⚙️ Admin Panel", callback_data: "menu:admin" }]);
+    rows.push([{ text: "🛡️ Admin Panel", callback_data: "menu:admin" }]);
   }
   return kb(rows);
 }
@@ -195,30 +208,43 @@ function userMenuKeyboard(data: TelegramBotData, isAdmin: boolean) {
 function userHelpText(data: TelegramBotData, lang: string) {
   if (lang === "bn") {
     return (
-      `🤖 ${data.ai.personaName}\n\n` +
-      `📌 ইউজার মেনু:\n` +
-      `/shop · /vip · /course · /tools\n` +
-      `/method · /shortner · /card · /sites\n` +
-      `/boost — ফ্রি গ্রুপ\n` +
-      `/aistatus — AI স্ট্যাটাস\n` +
-      `/forceaddstatus — অ্যাড কাউন্ট\n` +
-      `/rules · /id · /help\n\n` +
-      `💬 লিখুন: facebook id, vpn, দাম…\n` +
-      `🛒 সেলার: https://t.me/${data.config.salesBotUsername.replace("@", "")}`
+      `✨ ${data.ai.personaName}\n\n` +
+      `❝ পরিশ্রমই আসল শর্টকাট। ❞\n` +
+      `❝ Learn. Build. Earn. ❞\n` +
+      `❝ এক কমিউনিটি — হাজার সুযোগ। ❞\n\n` +
+      `▶️ Start চাপুন, তারপর নিচের বাটন ব্যবহার করুন।\n` +
+      `কমান্ড লেখার দরকার নেই।`
     );
   }
   return (
-    `🤖 ${data.ai.personaName}\n\n` +
-    `📌 User menu:\n` +
-    `/shop · /vip · /course · /tools\n` +
-    `/method · /shortner · /card · /sites\n` +
-    `/boost — free group\n` +
-    `/aistatus — AI status\n` +
-    `/forceaddstatus — add count\n` +
-    `/rules · /id · /help\n\n` +
-    `💬 Try: facebook id, vpn, price…\n` +
-    `🛒 Seller: https://t.me/${data.config.salesBotUsername.replace("@", "")}`
+    `✨ ${data.ai.personaName}\n\n` +
+    `❝ Hard work is the real shortcut. ❞\n` +
+    `❝ Learn. Build. Earn. ❞\n` +
+    `❝ One community — a thousand doors. ❞\n\n` +
+    `Tap ▶️ Start, then use the buttons below.\n` +
+    `No commands needed.`
   );
+}
+
+async function sendUserHome(
+  token: string,
+  chatId: number,
+  data: TelegramBotData,
+  isAdmin: boolean,
+  started = false,
+) {
+  const lang = data.config.defaultLang;
+  const onLine =
+    started
+      ? lang === "bn"
+        ? "\n\n🟢 বট চালু আছে।"
+        : "\n\n🟢 Bot is ON."
+      : "";
+  await tgApi(token, "sendMessage", {
+    chat_id: chatId,
+    text: `${data.premium.premiumBadge}\n${userHelpText(data, lang)}${onLine}`,
+    reply_markup: userMenuKeyboard(data, isAdmin),
+  });
 }
 
 function adminHelpText(lang: string) {
@@ -226,14 +252,14 @@ function adminHelpText(lang: string) {
     return (
       `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
       `মডারেশন:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
-      `সিকিউরিটি:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
+      `সিকিউরিটি:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n/resetlicense <id>\n\n` +
       `ইউজার মেনুতে ফিরতে: /start`
     );
   }
   return (
     `⚙️ Admin Panel — Basictrick Security Assistant\n\n` +
     `Moderation:\n/ban /tban /kick /mute /tmute /unban /unmute\n/warn /warns /resetwarn\n\n` +
-    `Security:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n\n` +
+    `Security:\n/lock /unlock /locks\n/forceadd on|off|5\n/namewatch on|off\n/night on|off\n/setcommands\n/resetlicense <id>\n\n` +
     `Back to user menu: /start`
   );
 }
@@ -607,6 +633,32 @@ export async function processTelegramUpdate(update: TgUpdate) {
       await sendBoostInvite(token, chatId, data, String(cb.from.id));
       return { ok: true };
     }
+    if ((payload === "menu:start" || payload === "menu:usermenu") && chatId) {
+      const isAdm = isBotAdmin(String(cb.from.id), data);
+      await sendUserHome(token, chatId, data, isAdm, payload === "menu:start");
+      return { ok: true };
+    }
+    if (payload.startsWith("menu:tool:") && chatId) {
+      const tool = parseToolKind(payload.split(":")[2]);
+      if (tool) await sendToolPanel(token, chatId, data, tool);
+      return { ok: true };
+    }
+    if (payload === "menu:license" && chatId) {
+      await sendLicenseHub(token, chatId, data);
+      return { ok: true };
+    }
+    if (payload.startsWith("lic:issue:") && chatId) {
+      const tool = parseToolKind(payload.split(":")[2]);
+      if (tool) {
+        await sendExtensionLicense(token, chatId, data, String(cb.from.id), cb.from.username, tool);
+      }
+      return { ok: true };
+    }
+    if (payload.startsWith("lic:info:") && chatId) {
+      const tool = parseToolKind(payload.split(":")[2]);
+      if (tool) await sendToolPanel(token, chatId, data, tool);
+      return { ok: true };
+    }
 
     if (payload.startsWith("captcha:") && chatId) {
       const uid = payload.split(":")[1];
@@ -681,15 +733,6 @@ export async function processTelegramUpdate(update: TgUpdate) {
             { text: "Locks", callback_data: "menu:locksinfo" },
           ],
         ]),
-      });
-      return { ok: true };
-    }
-    if (payload === "menu:usermenu" && chatId) {
-      const isAdm = isBotAdmin(String(cb.from.id), data);
-      await tgApi(token, "sendMessage", {
-        chat_id: chatId,
-        text: `${data.premium.premiumBadge}\n${userHelpText(data, data.config.defaultLang)}`,
-        reply_markup: userMenuKeyboard(data, isAdm),
       });
       return { ok: true };
     }
@@ -914,6 +957,11 @@ export async function processTelegramUpdate(update: TgUpdate) {
   const parts = text.split(/\s+/);
   const cmd = parts[0]?.toLowerCase().split("@")[0] || "";
   const args = parts.slice(1);
+
+  if (!isGroup && startReplyHits(text)) {
+    await sendUserHome(token, chatId, fresh, admin, true);
+    return { ok: true };
+  }
 
   const ADMIN_ONLY_CMDS = new Set([
     "/admin",
@@ -1218,14 +1266,12 @@ export async function processTelegramUpdate(update: TgUpdate) {
 
   // Public commands
   if (cmd === "/start" || cmd === "/help") {
-    await tgApi(token, "sendMessage", {
-      chat_id: chatId,
-      text: `${fresh.premium.premiumBadge}\n${userHelpText(fresh, fresh.config.defaultLang)}`,
-      reply_markup: userMenuKeyboard(fresh, admin),
-    });
-    if (fresh.booster.enabled && fresh.booster.autoSendInviteOnStart) {
-      await sendBoostInvite(token, chatId, fresh, userId);
+    const startTool = parseToolKind(args[0]);
+    if (cmd === "/start" && startTool) {
+      await sendExtensionLicense(token, chatId, fresh, userId, msg.from.username, startTool);
+      return { ok: true };
     }
+    await sendUserHome(token, chatId, fresh, admin, true);
     return { ok: true };
   }
 
@@ -1284,6 +1330,43 @@ export async function processTelegramUpdate(update: TgUpdate) {
 
   if (cmd === "/boost") {
     await sendBoostInvite(token, chatId, fresh, userId);
+    return { ok: true };
+  }
+
+  if (cmd === "/license" || cmd === "/mylicense") {
+    const tool = parseToolKind(args[0]);
+    if (tool) {
+      await sendExtensionLicense(token, chatId, fresh, userId, msg.from.username, tool);
+    } else {
+      await sendLicenseHub(token, chatId, fresh);
+    }
+    return { ok: true };
+  }
+
+  if (cmd === "/resetlicense") {
+    if (!admin) {
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: fresh.config.defaultLang === "bn" ? "⛔ শুধু Admin।" : "⛔ Admins only.",
+      });
+      return { ok: true };
+    }
+    const target = args[0] || "";
+    if (!/^\d+$/.test(target)) {
+      await tgApi(token, "sendMessage", {
+        chat_id: chatId,
+        text: "Usage: /resetlicense <telegramUserId> [boost|reset]",
+      });
+      return { ok: true };
+    }
+    const tool = parseToolKind(args[1]) || undefined;
+    const res = await unbindLicenseDevice(target, tool);
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text: res.found
+        ? `✅ Browser slots cleared for ${target}. They can bind up to 10 browsers again.\nKey: ${res.license?.key || "n/a"}`
+        : `No active license for ${target}.`,
+    });
     return { ok: true };
   }
 

@@ -19,6 +19,7 @@ export const TELEGRAM_USER_COMMANDS: { command: string; description: string }[] 
   { command: "shortner", description: "Shortner links" },
   { command: "card", description: "Card site links" },
   { command: "sites", description: "Site list links" },
+  { command: "license", description: "FB Boost / Reset Tools license" },
   { command: "boost", description: "Free / AI group invite" },
   { command: "aistatus", description: "AI unlock status" },
   { command: "forceaddstatus", description: "Your add count" },
@@ -33,6 +34,7 @@ export const TELEGRAM_ADMIN_COMMANDS: { command: string; description: string }[]
   { command: "namewatch", description: "Name watch on|off" },
   { command: "locks", description: "Show locks" },
   { command: "setcommands", description: "Sync bot command menus" },
+  { command: "resetlicense", description: "Clear FB Tools browser slots (admin)" },
 ];
 
 /** @deprecated use TELEGRAM_USER_COMMANDS */
@@ -80,6 +82,13 @@ export const BOT_COMMAND_DOCS: CommandDoc[] = [
     descriptionBn: "লিংক বাটন ক্যাটাগরি (Admin থেকে URL)",
     descriptionEn: "Link button categories (URLs from Admin)",
     exampleResponse: "📘 Methods + Open website buttons",
+  },
+  {
+    command: "/license",
+    category: "Booster",
+    descriptionBn: "FB Boost / Reset Tools লাইসেন্স — গ্রুপ ভেরিফাই করে ১ কি, ১০ ব্রাউজার",
+    descriptionEn: "FB Boost / Reset license after group verify. 1 key, 10 browsers",
+    exampleResponse: "🔑 BT-XXXX · 7 days · 10 browsers",
   },
   {
     command: "/boost",
@@ -134,7 +143,13 @@ export const BOT_COMMAND_DOCS: CommandDoc[] = [
     adminOnly: true,
   },
   {
-    command: "/admin",
+    command: "/resetlicense <id>",
+    category: "Admin",
+    descriptionBn: "FB Tools ব্রাউজার স্লট ক্লিয়ার (Admin)",
+    descriptionEn: "Clear FB Tools browser slots (Admin)",
+    exampleResponse: "Device unbound for 123…",
+    adminOnly: true,
+  },
     category: "Admin",
     descriptionBn: "Admin প্যানেল (শুধু admin ID)",
     descriptionEn: "Admin panel (admin IDs only)",

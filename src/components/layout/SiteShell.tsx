@@ -15,6 +15,7 @@ export function Header({ telegramUrl }: { telegramUrl?: string }) {
     { to: "/shop" as const, label: t.navShop },
     { to: "/method" as const, label: t.navMethod },
     { to: "/tools" as const, label: t.navTools },
+    { to: "/license" as const, label: t.navLicense },
     { to: "/contact" as const, label: t.navContact },
   ];
 
