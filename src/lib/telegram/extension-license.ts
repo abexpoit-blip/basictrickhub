@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { checkFreeGroupMembership, isMemberOfFreeGroup } from "./booster";
+import { checkFreeGroupMembership } from "./booster";
 import { tgApi } from "./moderation";
-import { updateTelegramData } from "./store";
+import { getTelegramData, updateTelegramData } from "./store";
 import type { ExtToolKind, TelegramBotData } from "./types";
 
 export const EXTENSION_LICENSE_DAYS = 7;
@@ -271,14 +271,14 @@ export async function sendJoinVerify(
   tool?: ExtToolKind | null,
 ) {
   const lang = data.config.defaultLang;
-  const check = await checkFreeGroupMembership(token, data, userId);
+  const check = await checkFreeGroupMembership(token, await getTelegramData(), userId);
   if (check.joined) {
     await tgApi(token, "sendMessage", {
       chat_id: chatId,
       text:
         lang === "bn"
-          ? `✅ গ্রুপ জয়েন ভেরিফাইড\n@basictrick · status: ${check.status || "member"}`
-          : `✅ Group join verified\n@basictrick · status: ${check.status || "member"}`,
+          ? `✅ গ্রুপ জয়েন ভেরিফাইড\n@basictrick · ${check.status || "member"}`
+          : `✅ Group join verified\n@basictrick · ${check.status || "member"}`,
     });
     if (tool) {
       await sendExtensionLicense(token, chatId, data, userId, username, tool);
@@ -286,30 +286,34 @@ export async function sendJoinVerify(
     return { ok: true, joined: true };
   }
 
-  const why =
-    check.error ||
-    (check.status === "left"
-      ? lang === "bn"
-        ? "আপনি এখনো গ্রুপে নেই (left)।"
-        : "You are not in the group (left)."
-      : check.status === "kicked"
+  const groupUrl = data.booster.freeGroupInvite || EXTENSION_GROUP_URL;
+  const why = check.inaccessible || check.error === "MEMBER_LIST_HIDDEN"
+    ? lang === "bn"
+      ? "গ্রুপে member list লুকানো, তাই বট API দিয়ে চেক করতে পারছে না।"
+      : "Group member list is hidden, so the bot API cannot check join."
+    : check.error ||
+      (check.status === "left"
         ? lang === "bn"
-          ? "আপনাকে গ্রুপ থেকে রিমুভ করা হয়েছে।"
-          : "You were removed from the group."
-        : lang === "bn"
-          ? "জয়েন পাওয়া যায়নি।"
-          : "Join not found.");
+          ? "আপনি এখনো গ্রুপে নেই (left)।"
+          : "You are not in the group (left)."
+        : check.status === "kicked"
+          ? lang === "bn"
+            ? "আপনাকে গ্রুপ থেকে রিমুভ করা হয়েছে।"
+            : "You were removed from the group."
+          : lang === "bn"
+            ? "জয়েন পাওয়া যায়নি।"
+            : "Join not found.");
 
   await tgApi(token, "sendMessage", {
     chat_id: chatId,
     text:
       lang === "bn"
-        ? `❌ ভেরিফাই হয়নি\n${why}\n\n১) Join চাপুন\n২) গ্রুপে ঢুকুন\n৩) আবার ✅ Verify চাপুন\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`
-        : `❌ Not verified\n${why}\n\n1) Tap Join\n2) Enter the group\n3) Tap ✅ Verify again\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`,
+        ? `❌ এখনো ভেরিফাই হয়নি\n${why}\n\nফিক্স (১০ সেকেন্ড):\n১) @basictrick গ্রুপে যান\n২) সেখানে লিখুন: /verify\n৩) বট Inbox এ লাইসেন্স আসবে\n\n👉 ${groupUrl}`
+        : `❌ Not verified yet\n${why}\n\nFix (10 seconds):\n1) Open @basictrick\n2) Type /verify there\n3) License arrives in this bot\n\n👉 ${groupUrl}`,
     reply_markup: {
       inline_keyboard: [
-        [{ text: "⚡ Join @basictrick", url: data.booster.freeGroupInvite || EXTENSION_GROUP_URL }],
-        [{ text: "✅ Verify", callback_data: tool ? `join:verify:${tool}` : "join:verify" }],
+        [{ text: "⚡ Open @basictrick", url: groupUrl }],
+        [{ text: "✅ I typed /verify — check again", callback_data: tool ? `join:verify:${tool}` : "join:verify" }],
       ],
     },
   });
@@ -326,18 +330,20 @@ export async function sendExtensionLicense(
 ) {
   const lang = data.config.defaultLang;
   const meta = EXT_TOOLS[tool];
-  const joined = await isMemberOfFreeGroup(token, data, userId);
-  if (!joined) {
+  const live = await getTelegramData();
+  const check = await checkFreeGroupMembership(token, live, userId);
+  if (!check.joined) {
+    const groupUrl = data.booster.freeGroupInvite || EXTENSION_GROUP_URL;
     await tgApi(token, "sendMessage", {
       chat_id: chatId,
       text:
         lang === "bn"
-          ? `🔑 ${meta.name}\n\nলাইসেন্স দেওয়ার আগে আমাদের পাবলিক গ্রুপে জয়েন ভেরিফাই করতে হবে।\nজয়েন করে আবার License চাপুন।\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`
-          : `🔑 ${meta.name}\n\nJoin our public group first. License is issued only after join is verified.\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`,
+          ? `🔑 ${meta.name}\n\nলাইসেন্স আগে জয়েন ভেরিফাই লাগে।\n@basictrick গ্রুপে গিয়ে লিখুন:\n/verify\n\n👉 ${groupUrl}`
+          : `🔑 ${meta.name}\n\nLicense needs join verify.\nIn @basictrick type:\n/verify\n\n👉 ${groupUrl}`,
       reply_markup: {
         inline_keyboard: [
-          [{ text: "⚡ Join @basictrick", url: data.booster.freeGroupInvite || EXTENSION_GROUP_URL }],
-          [{ text: "✅ Verify", callback_data: `join:verify:${tool}` }],
+          [{ text: "⚡ Open @basictrick", url: groupUrl }],
+          [{ text: "✅ Check again", callback_data: `join:verify:${tool}` }],
           [{ text: "📥 Download", url: meta.downloadUrl }],
         ],
       },

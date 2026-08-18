@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Basictrick Post Booster",
-  "version": "5.2",
-  "description": "Basictrick FB Post Booster — hex neon UI, 7-day Telegram license",
+  "version": "5.3",
+  "description": "Basictrick FB Post Booster — sky-blue UI, 7-day Telegram license",
   "permissions": [
     "activeTab",
     "storage",

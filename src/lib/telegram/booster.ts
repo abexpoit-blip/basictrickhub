@@ -8,30 +8,70 @@ export type JoinCheck = {
   status?: string;
   chatId?: string;
   error?: string;
+  inaccessible?: boolean;
 };
+
+const FREE_GROUP_USER = "basictrick";
+
+function normalizeChatRef(v?: string) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  const n = s.startsWith("@") ? s : s.match(/^-?\d+$/) ? s : s.replace(/^https?:\/\/t\.me\//, "").replace(/^t\.me\//, "");
+  if (n.startsWith("@") || n.match(/^-?\d+$/)) return n;
+  return `@${n.replace("@", "")}`;
+}
+
+export function isFreeCommunityChat(
+  chat: { id?: number | string; username?: string; title?: string },
+  data: TelegramBotData,
+) {
+  const username = String(chat.username || "")
+    .replace(/^@/, "")
+    .toLowerCase();
+  if (username === FREE_GROUP_USER) return true;
+  const id = String(chat.id || "").trim();
+  const stored = String(data.booster.freeGroupId || "").trim();
+  if (id && /^-?\d+$/.test(stored) && id === stored) return true;
+  if (stored.replace(/^@/, "").toLowerCase() === FREE_GROUP_USER && username === FREE_GROUP_USER) return true;
+  const title = String(chat.title || "").toLowerCase();
+  if (title.includes("basictrick") && (title.includes("free") || title.includes("ai") || title.includes("community"))) {
+    return true;
+  }
+  return (data.managedGroups || []).some((g) => {
+    if (id && g.chatId && String(g.chatId) === id) {
+      return (
+        g.username === FREE_GROUP_USER ||
+        String(g.chatId).includes("basictrick") ||
+        (g.inviteLink || "").includes("t.me/basictrick")
+      );
+    }
+    return false;
+  });
+}
+
+function isInaccessibleError(desc?: string) {
+  return /member list is inaccessible/i.test(desc || "");
+}
 
 function isJoinedStatus(status?: string, isMember?: boolean) {
   if (status === "member" || status === "administrator" || status === "creator") return true;
-  if (status === "restricted" && isMember) return true;
+  if (status === "restricted" && isMember !== false) return true;
   return false;
 }
 
 function candidateGroupIds(data: TelegramBotData): string[] {
   const ids: string[] = [];
   const push = (v?: string) => {
-    const s = String(v || "").trim();
-    if (!s) return;
-    const n = s.startsWith("@") ? s : s.match(/^-?\d+$/) ? s : s.replace(/^t\.me\//, "");
-    const val = n.startsWith("@") || n.match(/^-?\d+$/) ? n : `@${n.replace("@", "")}`;
-    if (!ids.includes(val)) ids.push(val);
+    const val = normalizeChatRef(v);
+    if (val && !ids.includes(val)) ids.push(val);
   };
-  push(data.booster.freeGroupId);
   push("@basictrick");
   push("basictrick");
+  push(data.booster.freeGroupId);
   for (const g of data.managedGroups || []) {
     const looksFree =
-      g.username === "basictrick" ||
-      g.chatId === "@basictrick" ||
+      String(g.username || "").replace(/^@/, "") === FREE_GROUP_USER ||
+      String(g.chatId || "").includes("basictrick") ||
       (g.inviteLink || "").includes("t.me/basictrick");
     if (!looksFree) continue;
     push(g.chatId);
@@ -40,10 +80,22 @@ function candidateGroupIds(data: TelegramBotData): string[] {
   return ids;
 }
 
-async function markJoined(userId: string, resolvedChatId?: string) {
+export async function markJoined(userId: string, resolvedChatId?: string) {
   await updateTelegramData((d) => {
     const m = d.members.find((x) => x.telegramUserId === userId);
     if (m) m.joinedFreeGroup = true;
+    else {
+      d.members.push({
+        telegramUserId: userId,
+        warns: 0,
+        banned: false,
+        addedGroupIds: [],
+        purchasedProductIds: [],
+        joinedFreeGroup: true,
+        createdAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      });
+    }
     if (resolvedChatId && /^\-?\d+$/.test(resolvedChatId)) {
       d.booster.freeGroupId = resolvedChatId;
     }
@@ -51,7 +103,13 @@ async function markJoined(userId: string, resolvedChatId?: string) {
   });
 }
 
-/** Live Telegram check. getChatMember does not throw — must read res.ok. */
+async function isUserGroupAdmin(token: string, chatId: string, uid: number) {
+  const admins = await tgApi(token, "getChatAdministrators", { chat_id: chatId });
+  if (!admins.ok || !Array.isArray(admins.result)) return false;
+  return (admins.result as { user?: { id?: number } }[]).some((a) => Number(a.user?.id) === uid);
+}
+
+/** Live Telegram check. Hidden member lists make getChatMember fail — never treat that as "left". */
 export async function checkFreeGroupMembership(
   token: string,
   data: TelegramBotData,
@@ -61,34 +119,70 @@ export async function checkFreeGroupMembership(
   if (!Number.isFinite(uid)) return { joined: false, error: "Invalid user id" };
 
   let lastError = "";
+  let inaccessible = false;
+  let leftOfficial = false;
+  let officialStatus = "";
+
   for (const chatId of candidateGroupIds(data)) {
+    const chat = await tgApi(token, "getChat", { chat_id: chatId });
+    const info = chat.ok
+      ? (chat.result as { id?: number; username?: string; type?: string } | undefined)
+      : undefined;
+    const target = info?.id ? String(info.id) : chatId;
+    const official =
+      String(info?.username || "")
+        .replace(/^@/, "")
+        .toLowerCase() === FREE_GROUP_USER ||
+      String(chatId).replace(/^@/, "").toLowerCase() === FREE_GROUP_USER;
+
+    if (info?.id && (!data.booster.freeGroupId || !/^-?\d+$/.test(String(data.booster.freeGroupId)))) {
+      await updateTelegramData((d) => {
+        d.booster.freeGroupId = String(info.id);
+        return d;
+      });
+    }
+
     const res = await tgApi(token, "getChatMember", {
-      chat_id: chatId,
+      chat_id: target,
       user_id: uid,
     });
     if (!res.ok) {
       lastError = res.description || "getChatMember failed";
+      if (isInaccessibleError(res.description)) {
+        inaccessible = true;
+        if (await isUserGroupAdmin(token, target, uid)) {
+          await markJoined(userId, info?.id ? String(info.id) : undefined);
+          return { joined: true, status: "administrator", chatId: target };
+        }
+      }
       continue;
     }
     const result = res.result as { status?: string; is_member?: boolean } | undefined;
-    const joined = isJoinedStatus(result?.status, result?.is_member);
-    if (joined) {
-      let numericId = chatId;
-      const chat = await tgApi(token, "getChat", { chat_id: chatId });
-      const id = (chat.result as { id?: number } | undefined)?.id;
-      if (chat.ok && id) numericId = String(id);
-      await markJoined(userId, numericId);
-      return { joined: true, status: result?.status, chatId: numericId };
+    if (isJoinedStatus(result?.status, result?.is_member)) {
+      await markJoined(userId, info?.id ? String(info.id) : undefined);
+      return { joined: true, status: result?.status, chatId: target };
     }
-    return { joined: false, status: result?.status || "left", chatId };
+    if (official) {
+      leftOfficial = true;
+      officialStatus = result?.status || "left";
+    }
+    lastError = `status:${result?.status || "unknown"}`;
   }
 
   const cached = !!data.members.find((m) => m.telegramUserId === userId)?.joinedFreeGroup;
-  if (cached) return { joined: true, status: "cached" };
+  if (cached && !leftOfficial) return { joined: true, status: "cached" };
+
+  if (leftOfficial) {
+    return { joined: false, status: officialStatus || "left" };
+  }
+
   await pushTgLog("warn", `Join check failed for ${userId}: ${lastError || "no chat"}`);
   return {
     joined: false,
-    error: lastError || "Could not reach @basictrick. Add the bot to the group as admin.",
+    inaccessible,
+    error: inaccessible
+      ? "MEMBER_LIST_HIDDEN"
+      : lastError || "Could not reach @basictrick. Add @basictrickbot to the group as admin.",
   };
 }
 

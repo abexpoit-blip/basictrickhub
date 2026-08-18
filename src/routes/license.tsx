@@ -36,7 +36,7 @@ function LicenseHub() {
   return (
     <SiteShell>
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <div className="rounded-3xl bg-gradient-to-br from-violet-600 via-sky-500 to-cyan-400 p-6 text-white shadow-xl">
+        <div className="rounded-3xl bg-gradient-to-br from-sky-600 via-sky-500 to-cyan-400 p-6 text-white shadow-xl shadow-sky-200/50">
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">License</h1>
           <p className="mt-2 max-w-xl text-sm text-white/90">
             {lang === "bn"
@@ -57,7 +57,7 @@ function LicenseHub() {
                   <Button className="bg-sky-600 hover:bg-sky-700">Download</Button>
                 </a>
                 <a href={`https://t.me/basictrickbot?start=${card.start}`} target="_blank" rel="noreferrer">
-                  <Button className="bg-violet-600 hover:bg-violet-700">License</Button>
+                  <Button className="bg-sky-600 hover:bg-sky-700">License</Button>
                 </a>
               </div>
             </article>

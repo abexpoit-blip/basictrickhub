@@ -30,10 +30,10 @@ import { Route as ToolsCheckLiveUidRouteImport } from './routes/tools.check-live
 import { Route as ToolsFacebookQuickLinksRouteImport } from './routes/tools.facebook-quick-links'
 import { Route as ToolsFindFacebookIdRouteImport } from './routes/tools.find-facebook-id'
 import { Route as ApiAccessValidateRouteImport } from './routes/api.access.validate'
+import { Route as ApiExtensionDownloadRouteImport } from './routes/api.extension.download'
+import { Route as ApiExtensionLicenseRouteImport } from './routes/api.extension.license'
 import { Route as ApiPaymentsZinipayRouteImport } from './routes/api.payments.zinipay'
 import { Route as ApiTelegramWebhookRouteImport } from './routes/api.telegram.webhook'
-import { Route as ApiExtensionLicenseRouteImport } from './routes/api.extension.license'
-import { Route as ApiExtensionDownloadRouteImport } from './routes/api.extension.download'
 import { Route as ApiPaymentsPlisioWebhookRouteImport } from './routes/api.payments.plisio.webhook'
 import { Route as ApiPaymentsZinipayWebhookRouteImport } from './routes/api.payments.zinipay.webhook'
 
@@ -143,6 +143,16 @@ const ApiAccessValidateRoute = ApiAccessValidateRouteImport.update({
   path: '/validate',
   getParentRoute: () => ApiAccessRoute,
 } as any)
+const ApiExtensionDownloadRoute = ApiExtensionDownloadRouteImport.update({
+  id: '/api/extension/download',
+  path: '/api/extension/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExtensionLicenseRoute = ApiExtensionLicenseRouteImport.update({
+  id: '/api/extension/license',
+  path: '/api/extension/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPaymentsZinipayRoute = ApiPaymentsZinipayRouteImport.update({
   id: '/api/payments/zinipay',
   path: '/api/payments/zinipay',
@@ -151,16 +161,6 @@ const ApiPaymentsZinipayRoute = ApiPaymentsZinipayRouteImport.update({
 const ApiTelegramWebhookRoute = ApiTelegramWebhookRouteImport.update({
   id: '/api/telegram/webhook',
   path: '/api/telegram/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiExtensionLicenseRoute = ApiExtensionLicenseRouteImport.update({
-  id: '/api/extension/license',
-  path: '/api/extension/license',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiExtensionDownloadRoute = ApiExtensionDownloadRouteImport.update({
-  id: '/api/extension/download',
-  path: '/api/extension/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPaymentsPlisioWebhookRoute =
@@ -198,10 +198,10 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
+  '/api/extension/download': typeof ApiExtensionDownloadRoute
+  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
-  '/api/extension/download': typeof ApiExtensionDownloadRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
   '/api/payments/zinipay/webhook': typeof ApiPaymentsZinipayWebhookRoute
 }
@@ -227,10 +227,10 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/tools': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
+  '/api/extension/download': typeof ApiExtensionDownloadRoute
+  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
-  '/api/extension/download': typeof ApiExtensionDownloadRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
   '/api/payments/zinipay/webhook': typeof ApiPaymentsZinipayWebhookRoute
 }
@@ -257,10 +257,10 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/api/access/validate': typeof ApiAccessValidateRoute
+  '/api/extension/download': typeof ApiExtensionDownloadRoute
+  '/api/extension/license': typeof ApiExtensionLicenseRoute
   '/api/payments/zinipay': typeof ApiPaymentsZinipayRouteWithChildren
   '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
-  '/api/extension/license': typeof ApiExtensionLicenseRoute
-  '/api/extension/download': typeof ApiExtensionDownloadRoute
   '/api/payments/plisio/webhook': typeof ApiPaymentsPlisioWebhookRoute
   '/api/payments/zinipay/webhook': typeof ApiPaymentsZinipayWebhookRoute
 }
@@ -288,10 +288,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/tools/'
     | '/api/access/validate'
+    | '/api/extension/download'
+    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
-    | '/api/extension/license'
-    | '/api/extension/download'
     | '/api/payments/plisio/webhook'
     | '/api/payments/zinipay/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -317,10 +317,10 @@ export interface FileRouteTypes {
     | '/admin'
     | '/tools'
     | '/api/access/validate'
+    | '/api/extension/download'
+    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
-    | '/api/extension/license'
-    | '/api/extension/download'
     | '/api/payments/plisio/webhook'
     | '/api/payments/zinipay/webhook'
   id:
@@ -346,10 +346,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/tools/'
     | '/api/access/validate'
+    | '/api/extension/download'
+    | '/api/extension/license'
     | '/api/payments/zinipay'
     | '/api/telegram/webhook'
-    | '/api/extension/license'
-    | '/api/extension/download'
     | '/api/payments/plisio/webhook'
     | '/api/payments/zinipay/webhook'
   fileRoutesById: FileRoutesById
@@ -374,10 +374,10 @@ export interface RootRouteChildren {
   ToolsFindFacebookIdRoute: typeof ToolsFindFacebookIdRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ToolsIndexRoute: typeof ToolsIndexRoute
+  ApiExtensionDownloadRoute: typeof ApiExtensionDownloadRoute
+  ApiExtensionLicenseRoute: typeof ApiExtensionLicenseRoute
   ApiPaymentsZinipayRoute: typeof ApiPaymentsZinipayRouteWithChildren
   ApiTelegramWebhookRoute: typeof ApiTelegramWebhookRoute
-  ApiExtensionLicenseRoute: typeof ApiExtensionLicenseRoute
-  ApiExtensionDownloadRoute: typeof ApiExtensionDownloadRoute
   ApiPaymentsPlisioWebhookRoute: typeof ApiPaymentsPlisioWebhookRoute
 }
 
@@ -530,6 +530,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAccessValidateRouteImport
       parentRoute: typeof ApiAccessRoute
     }
+    '/api/extension/download': {
+      id: '/api/extension/download'
+      path: '/api/extension/download'
+      fullPath: '/api/extension/download'
+      preLoaderRoute: typeof ApiExtensionDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/extension/license': {
+      id: '/api/extension/license'
+      path: '/api/extension/license'
+      fullPath: '/api/extension/license'
+      preLoaderRoute: typeof ApiExtensionLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/payments/zinipay': {
       id: '/api/payments/zinipay'
       path: '/api/payments/zinipay'
@@ -542,20 +556,6 @@ declare module '@tanstack/react-router' {
       path: '/api/telegram/webhook'
       fullPath: '/api/telegram/webhook'
       preLoaderRoute: typeof ApiTelegramWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/extension/license': {
-      id: '/api/extension/license'
-      path: '/api/extension/license'
-      fullPath: '/api/extension/license'
-      preLoaderRoute: typeof ApiExtensionLicenseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/extension/download': {
-      id: '/api/extension/download'
-      path: '/api/extension/download'
-      fullPath: '/api/extension/download'
-      preLoaderRoute: typeof ApiExtensionDownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/payments/plisio/webhook': {
@@ -629,10 +629,10 @@ const rootRouteChildren: RootRouteChildren = {
   ToolsFindFacebookIdRoute: ToolsFindFacebookIdRoute,
   AdminIndexRoute: AdminIndexRoute,
   ToolsIndexRoute: ToolsIndexRoute,
+  ApiExtensionDownloadRoute: ApiExtensionDownloadRoute,
+  ApiExtensionLicenseRoute: ApiExtensionLicenseRoute,
   ApiPaymentsZinipayRoute: ApiPaymentsZinipayRouteWithChildren,
   ApiTelegramWebhookRoute: ApiTelegramWebhookRoute,
-  ApiExtensionLicenseRoute: ApiExtensionLicenseRoute,
-  ApiExtensionDownloadRoute: ApiExtensionDownloadRoute,
   ApiPaymentsPlisioWebhookRoute: ApiPaymentsPlisioWebhookRoute,
 }
 export const routeTree = rootRouteImport

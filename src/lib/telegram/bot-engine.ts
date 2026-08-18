@@ -2,7 +2,9 @@ import { sendExtensionLicense, sendLicenseHub, sendToolPanel, sendJoinVerify, pa
 import { buildSmartReply } from "./ai-brain";
 import {
   computeAiUnlock,
+  isFreeCommunityChat,
   isMemberOfFreeGroup,
+  markJoined,
   premiumLockedMessage,
   refreshAiUnlock,
   sendBoostInvite,
@@ -38,7 +40,7 @@ type TgMessage = {
   message_id: number;
   text?: string;
   caption?: string;
-  chat: { id: number; type: string; title?: string };
+  chat: { id: number; type: string; title?: string; username?: string };
   from?: TgUser;
   reply_to_message?: TgMessage;
   new_chat_members?: TgUser[];
@@ -69,10 +71,15 @@ type TgUpdate = {
     message?: { chat: { id: number }; message_id: number };
   };
   my_chat_member?: {
-    chat: { id: number; title?: string; type: string };
+    chat: { id: number; title?: string; type: string; username?: string };
     from: TgUser;
     new_chat_member: { status: string; user: TgUser };
     old_chat_member?: { status: string };
+  };
+  chat_member?: {
+    chat: { id: number; title?: string; type: string; username?: string };
+    from: TgUser;
+    new_chat_member: { status: string; is_member?: boolean; user: TgUser };
   };
 };
 
@@ -179,7 +186,6 @@ function startReplyHits(text: string) {
 function userMenuKeyboard(data: TelegramBotData, isAdmin: boolean) {
   const seller = data.config.salesBotUsername.replace("@", "");
   const rows: { text: string; url?: string; callback_data?: string }[][] = [
-    [{ text: "▶️ Start", callback_data: "menu:start" }],
     [
       { text: "🚀 FB Boost Tools", callback_data: "menu:tool:boost" },
       { text: "🔄 FB Reset Tools", callback_data: "menu:tool:reset" },
@@ -212,8 +218,8 @@ function userHelpText(data: TelegramBotData, lang: string) {
       `❝ পরিশ্রমই আসল শর্টকাট। ❞\n` +
       `❝ Learn. Build. Earn. ❞\n` +
       `❝ এক কমিউনিটি — হাজার সুযোগ। ❞\n\n` +
-      `▶️ Start চাপুন, তারপর নিচের বাটন ব্যবহার করুন।\n` +
-      `কমান্ড লেখার দরকার নেই।`
+      `▶️ বট খুললেই মেনু চলে আসে। নিচের বাটন ব্যবহার করুন।\n` +
+      `লাইসেন্সের জন্য @basictrick এ /verify লিখুন।`
     );
   }
   return (
@@ -221,8 +227,8 @@ function userHelpText(data: TelegramBotData, lang: string) {
     `❝ Hard work is the real shortcut. ❞\n` +
     `❝ Learn. Build. Earn. ❞\n` +
     `❝ One community — a thousand doors. ❞\n\n` +
-    `Tap ▶️ Start, then use the buttons below.\n` +
-    `No commands needed.`
+    `Open the bot — the menu appears immediately.\n` +
+    `For a license, type /verify in @basictrick.`
   );
 }
 
@@ -349,9 +355,7 @@ async function upsertMember(from: TgUser) {
 
 async function sendAiStatus(token: string, chatId: number, userId: string) {
   const data = await getTelegramData();
-  if (data.booster.freeGroupId) {
-    await isMemberOfFreeGroup(token, data, userId);
-  }
+  await isMemberOfFreeGroup(token, data, userId);
   const fresh = await getTelegramData();
   const member = fresh.members.find((m) => m.telegramUserId === userId);
   const status = computeAiUnlock(member, fresh);
@@ -381,7 +385,7 @@ async function assertPremiumAi(
 ): Promise<boolean> {
   const data = await getTelegramData();
   if (!data.premium.enabled || admin) return true;
-  if (data.booster.freeGroupId) await isMemberOfFreeGroup(token, data, userId);
+  await isMemberOfFreeGroup(token, data, userId);
   const fresh = await getTelegramData();
   const member = fresh.members.find((m) => m.telegramUserId === userId);
   const { unlocked } = computeAiUnlock(member, fresh);
@@ -452,6 +456,9 @@ export async function processTelegramUpdate(update: TgUpdate) {
         if (!m.addedGroupIds.includes(chatId)) m.addedGroupIds.push(chatId);
         return d;
       });
+      if (isFreeCommunityChat(ev.chat, data)) {
+        await markJoined(adder, chatId);
+      }
       await refreshAiUnlock(adder);
       await pushTgLog("info", `Bot added to ${ev.chat.title || chatId} by ${adder}`);
       await tgApi(token, "sendMessage", {
@@ -467,6 +474,21 @@ export async function processTelegramUpdate(update: TgUpdate) {
         if (g) g.isActive = false;
         return d;
       });
+    }
+    return { ok: true };
+  }
+
+  if (update.chat_member) {
+    const ev = update.chat_member;
+    const status = ev.new_chat_member.status;
+    const uid = String(ev.new_chat_member.user.id);
+    if (isFreeCommunityChat(ev.chat, data)) {
+      const joined =
+        status === "member" ||
+        status === "administrator" ||
+        status === "creator" ||
+        (status === "restricted" && ev.new_chat_member.is_member !== false);
+      if (joined) await markJoined(uid, String(ev.chat.id));
     }
     return { ok: true };
   }
@@ -531,7 +553,7 @@ export async function processTelegramUpdate(update: TgUpdate) {
           mem.captchaJoinedAt = new Date().toISOString();
           mem.approved = false;
         }
-        if (d.booster.freeGroupId && String(chatId) === d.booster.freeGroupId) {
+        if (isFreeCommunityChat(update.message.chat, data)) {
           if (mem) {
             mem.joinedFreeGroup = true;
             d.booster.joinsTracked += 1;
@@ -613,6 +635,7 @@ export async function processTelegramUpdate(update: TgUpdate) {
     const cb = update.callback_query;
     const payload = cb.data || "";
     const chatId = cb.message?.chat.id;
+    await upsertMember(cb.from);
     await tgApi(token, "answerCallbackQuery", { callback_query_id: cb.id });
 
     if (payload === "menu:aistatus" && chatId) {
@@ -811,6 +834,10 @@ export async function processTelegramUpdate(update: TgUpdate) {
   }
 
   await upsertMember(msg.from);
+
+  if (isGroup && isFreeCommunityChat(msg.chat, data)) {
+    await markJoined(userId, String(chatId));
+  }
 
   // Register group if bot sees messages there
   if (isGroup) {
@@ -1278,6 +1305,38 @@ export async function processTelegramUpdate(update: TgUpdate) {
       return { ok: true };
     }
     await sendUserHome(token, chatId, fresh, admin, true);
+    return { ok: true };
+  }
+
+  if (cmd === "/verify") {
+    if (isGroup) {
+      if (isFreeCommunityChat(msg.chat, fresh)) {
+        await markJoined(userId, String(chatId));
+        const lang = fresh.config.defaultLang;
+        await tgApi(token, "sendMessage", {
+          chat_id: chatId,
+          text:
+            lang === "bn"
+              ? "✅ জয়েন ভেরিফাইড। লাইসেন্স Inbox এ পাঠানো হলো — না পেলে বটে License চাপুন।"
+              : "✅ Join verified. License sent in bot inbox — or tap License there.",
+        });
+        try {
+          await sendLicenseHub(token, Number(userId), await getTelegramData());
+        } catch {
+          /* user may need to open the bot once */
+        }
+      } else {
+        await tgApi(token, "sendMessage", {
+          chat_id: chatId,
+          text:
+            fresh.config.defaultLang === "bn"
+              ? "এই গ্রুপ নয়। @basictrick এ গিয়ে /verify লিখুন।"
+              : "Wrong group. Type /verify in @basictrick.",
+        });
+      }
+      return { ok: true };
+    }
+    await sendJoinVerify(token, chatId, fresh, userId, msg.from.username, parseToolKind(args[0]));
     return { ok: true };
   }
 

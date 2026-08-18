@@ -88,10 +88,10 @@ function ToolDetail() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <Button className="bg-violet-600 hover:bg-violet-700">License</Button>
+                  <Button className="bg-sky-600 hover:bg-sky-700">License</Button>
                 </a>
                 <a href="https://t.me/basictrick" target="_blank" rel="noreferrer">
-                  <Button variant="outline" className="border-violet-300 text-violet-700">
+                  <Button variant="outline" className="border-sky-300 text-sky-700">
                     Join @basictrick
                   </Button>
                 </a>

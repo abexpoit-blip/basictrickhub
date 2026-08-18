@@ -20,6 +20,7 @@ export const TELEGRAM_USER_COMMANDS: { command: string; description: string }[] 
   { command: "card", description: "Card site links" },
   { command: "sites", description: "Site list links" },
   { command: "license", description: "FB Boost / Reset Tools license" },
+  { command: "verify", description: "Verify @basictrick join" },
   { command: "boost", description: "Free / AI group invite" },
   { command: "aistatus", description: "AI unlock status" },
   { command: "forceaddstatus", description: "Your add count" },
