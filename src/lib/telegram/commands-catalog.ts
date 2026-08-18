@@ -150,6 +150,8 @@ export const BOT_COMMAND_DOCS: CommandDoc[] = [
     exampleResponse: "Device unbound for 123…",
     adminOnly: true,
   },
+  {
+    command: "/admin",
     category: "Admin",
     descriptionBn: "Admin প্যানেল (শুধু admin ID)",
     descriptionEn: "Admin panel (admin IDs only)",
