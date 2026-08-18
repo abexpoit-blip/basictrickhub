@@ -26,7 +26,12 @@ export async function sendLog(
 }
 
 export function isBotAdmin(userId: string, data: TelegramBotData) {
-  return data.config.adminIds.map(String).includes(String(userId));
+  const id = String(userId || "").trim();
+  if (!id) return false;
+  return (data.config.adminIds || [])
+    .map((x) => String(x).trim())
+    .filter(Boolean)
+    .includes(id);
 }
 
 export async function restrictChatMember(

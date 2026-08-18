@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { isMemberOfFreeGroup } from "./booster";
+import { checkFreeGroupMembership, isMemberOfFreeGroup } from "./booster";
 import { tgApi } from "./moderation";
 import { updateTelegramData } from "./store";
 import type { ExtToolKind, TelegramBotData } from "./types";
@@ -212,11 +212,13 @@ function licenseHubMarkup(lang: string) {
         { text: "📥 Download", url: EXT_TOOLS.boost.downloadUrl },
         { text: "🪪 License", callback_data: "lic:issue:boost" },
       ],
+      [{ text: "✅ Verify join", callback_data: "join:verify:boost" }],
       [{ text: `🔄 ${EXT_TOOLS.reset.name}`, callback_data: "menu:tool:reset" }],
       [
         { text: "📥 Download", url: EXT_TOOLS.reset.pageUrl },
         { text: "🪪 License", callback_data: "lic:issue:reset" },
       ],
+      [{ text: "✅ Verify join", callback_data: "join:verify:reset" }],
       [{ text: bn ? "🏠 মেনু" : "🏠 Menu", callback_data: "menu:usermenu" }],
     ],
   };
@@ -241,6 +243,7 @@ export async function sendToolPanel(
       inline_keyboard: [
         [{ text: "📥 Download", url: meta.downloadUrl }],
         [{ text: "🪪 License", callback_data: `lic:issue:${tool}` }],
+        [{ text: "✅ Verify join", callback_data: `join:verify:${tool}` }],
         [{ text: "🏠 Menu", callback_data: "menu:usermenu" }],
       ],
     },
@@ -257,6 +260,60 @@ export async function sendLicenseHub(token: string, chatId: number, data: Telegr
         : `🔑 License section\n\n1) Download — extension ZIP\n2) License — verify @basictrick join, then 1 key\n\n⏳ ${EXTENSION_LICENSE_DAYS} days · 💻 ${MAX_BROWSERS_PER_LICENSE} browsers on 1 device`,
     reply_markup: licenseHubMarkup(lang),
   });
+}
+
+export async function sendJoinVerify(
+  token: string,
+  chatId: number,
+  data: TelegramBotData,
+  userId: string,
+  username: string | undefined,
+  tool?: ExtToolKind | null,
+) {
+  const lang = data.config.defaultLang;
+  const check = await checkFreeGroupMembership(token, data, userId);
+  if (check.joined) {
+    await tgApi(token, "sendMessage", {
+      chat_id: chatId,
+      text:
+        lang === "bn"
+          ? `✅ গ্রুপ জয়েন ভেরিফাইড\n@basictrick · status: ${check.status || "member"}`
+          : `✅ Group join verified\n@basictrick · status: ${check.status || "member"}`,
+    });
+    if (tool) {
+      await sendExtensionLicense(token, chatId, data, userId, username, tool);
+    }
+    return { ok: true, joined: true };
+  }
+
+  const why =
+    check.error ||
+    (check.status === "left"
+      ? lang === "bn"
+        ? "আপনি এখনো গ্রুপে নেই (left)।"
+        : "You are not in the group (left)."
+      : check.status === "kicked"
+        ? lang === "bn"
+          ? "আপনাকে গ্রুপ থেকে রিমুভ করা হয়েছে।"
+          : "You were removed from the group."
+        : lang === "bn"
+          ? "জয়েন পাওয়া যায়নি।"
+          : "Join not found.");
+
+  await tgApi(token, "sendMessage", {
+    chat_id: chatId,
+    text:
+      lang === "bn"
+        ? `❌ ভেরিফাই হয়নি\n${why}\n\n১) Join চাপুন\n২) গ্রুপে ঢুকুন\n৩) আবার ✅ Verify চাপুন\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`
+        : `❌ Not verified\n${why}\n\n1) Tap Join\n2) Enter the group\n3) Tap ✅ Verify again\n\n👉 ${data.booster.freeGroupInvite || EXTENSION_GROUP_URL}`,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "⚡ Join @basictrick", url: data.booster.freeGroupInvite || EXTENSION_GROUP_URL }],
+        [{ text: "✅ Verify", callback_data: tool ? `join:verify:${tool}` : "join:verify" }],
+      ],
+    },
+  });
+  return { ok: true, joined: false };
 }
 
 export async function sendExtensionLicense(
@@ -280,7 +337,7 @@ export async function sendExtensionLicense(
       reply_markup: {
         inline_keyboard: [
           [{ text: "⚡ Join @basictrick", url: data.booster.freeGroupInvite || EXTENSION_GROUP_URL }],
-          [{ text: "🪪 Check again", callback_data: `lic:issue:${tool}` }],
+          [{ text: "✅ Verify", callback_data: `join:verify:${tool}` }],
           [{ text: "📥 Download", url: meta.downloadUrl }],
         ],
       },

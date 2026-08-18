@@ -1,4 +1,4 @@
-import { sendExtensionLicense, sendLicenseHub, sendToolPanel, parseToolKind, unbindLicenseDevice } from "./extension-license";
+import { sendExtensionLicense, sendLicenseHub, sendToolPanel, sendJoinVerify, parseToolKind, unbindLicenseDevice } from "./extension-license";
 import { buildSmartReply } from "./ai-brain";
 import {
   computeAiUnlock,
@@ -367,8 +367,8 @@ async function sendAiStatus(token: string, chatId: number, userId: string) {
     chat_id: chatId,
     text: `${fresh.premium.premiumBadge}\n${text}`,
     reply_markup: kb([
-      [{ text: "🚀 Join Free Group", url: fresh.booster.freeGroupInvite }],
-      [{ text: "How to add bot", callback_data: "menu:howtoadd" }],
+      [{ text: "⚡ Join @basictrick", url: fresh.booster.freeGroupInvite }],
+      [{ text: "✅ Verify", callback_data: "join:verify" }],
     ]),
   });
 }
@@ -390,8 +390,8 @@ async function assertPremiumAi(
       chat_id: chatId,
       text: premiumLockedMessage(fresh),
       reply_markup: kb([
-        [{ text: "🚀 Join Free Group", url: fresh.booster.freeGroupInvite }],
-        [{ text: "✦ AI Status", callback_data: "menu:aistatus" }],
+        [{ text: "⚡ Join @basictrick", url: fresh.booster.freeGroupInvite }],
+        [{ text: "✅ Verify", callback_data: "join:verify" }],
       ]),
     });
     return false;
@@ -657,6 +657,12 @@ export async function processTelegramUpdate(update: TgUpdate) {
     if (payload.startsWith("lic:info:") && chatId) {
       const tool = parseToolKind(payload.split(":")[2]);
       if (tool) await sendToolPanel(token, chatId, data, tool);
+      return { ok: true };
+    }
+    if (payload === "join:verify" || payload.startsWith("join:verify:") ) {
+      if (!chatId) return { ok: true };
+      const tool = payload === "join:verify" ? null : parseToolKind(payload.split(":")[2]);
+      await sendJoinVerify(token, chatId, data, String(cb.from.id), cb.from.username, tool);
       return { ok: true };
     }
 
