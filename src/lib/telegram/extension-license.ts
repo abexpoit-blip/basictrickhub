@@ -287,19 +287,20 @@ export async function sendJoinVerify(
   }
 
   const groupUrl = data.booster.freeGroupInvite || EXTENSION_GROUP_URL;
-  const why = check.inaccessible || check.error === "MEMBER_LIST_HIDDEN"
+  const channelFix = check.error === "CHANNEL_BOT_NOT_ADMIN" || check.error === "MEMBER_LIST_HIDDEN" || check.inaccessible;
+  const why = channelFix
     ? lang === "bn"
-      ? "গ্রুপে member list লুকানো, তাই বট API দিয়ে চেক করতে পারছে না।"
-      : "Group member list is hidden, so the bot API cannot check join."
+      ? "@basictrick একটি চ্যানেল। চ্যানেলে মেসেজ লেখা যায় না, তাই /verify কাজ করে না। বটকে চ্যানেলে Admin করতে হবে।"
+      : "@basictrick is a channel. You cannot type /verify there. The bot must be a channel admin."
     : check.error ||
       (check.status === "left"
         ? lang === "bn"
-          ? "আপনি এখনো গ্রুপে নেই (left)।"
-          : "You are not in the group (left)."
+          ? "আপনি এখনো চ্যানেলে নেই (left)।"
+          : "You are not in the channel (left)."
         : check.status === "kicked"
           ? lang === "bn"
-            ? "আপনাকে গ্রুপ থেকে রিমুভ করা হয়েছে।"
-            : "You were removed from the group."
+            ? "আপনাকে চ্যানেল থেকে রিমুভ করা হয়েছে।"
+            : "You were removed from the channel."
           : lang === "bn"
             ? "জয়েন পাওয়া যায়নি।"
             : "Join not found.");
@@ -308,12 +309,12 @@ export async function sendJoinVerify(
     chat_id: chatId,
     text:
       lang === "bn"
-        ? `❌ এখনো ভেরিফাই হয়নি\n${why}\n\nফিক্স (১০ সেকেন্ড):\n১) @basictrick গ্রুপে যান\n২) সেখানে লিখুন: /verify\n৩) বট Inbox এ লাইসেন্স আসবে\n\n👉 ${groupUrl}`
-        : `❌ Not verified yet\n${why}\n\nFix (10 seconds):\n1) Open @basictrick\n2) Type /verify there\n3) License arrives in this bot\n\n👉 ${groupUrl}`,
+        ? `❌ এখনো ভেরিফাই হয়নি\n${why}\n\nএকবার করুন:\n১) @basictrick চ্যানেল খুলুন\n২) Administrators → Add @basictrickbot (Admin)\n৩) এখানে আবার License চাপুন\n\n👉 ${groupUrl}`
+        : `❌ Not verified yet\n${why}\n\nDo this once:\n1) Open @basictrick\n2) Administrators → add @basictrickbot as Admin\n3) Tap License here again\n\n👉 ${groupUrl}`,
     reply_markup: {
       inline_keyboard: [
         [{ text: "⚡ Open @basictrick", url: groupUrl }],
-        [{ text: "✅ I typed /verify — check again", callback_data: tool ? `join:verify:${tool}` : "join:verify" }],
+        [{ text: "✅ Check again", callback_data: tool ? `join:verify:${tool}` : "join:verify" }],
       ],
     },
   });
@@ -338,8 +339,8 @@ export async function sendExtensionLicense(
       chat_id: chatId,
       text:
         lang === "bn"
-          ? `🔑 ${meta.name}\n\nলাইসেন্স আগে জয়েন ভেরিফাই লাগে।\n@basictrick গ্রুপে গিয়ে লিখুন:\n/verify\n\n👉 ${groupUrl}`
-          : `🔑 ${meta.name}\n\nLicense needs join verify.\nIn @basictrick type:\n/verify\n\n👉 ${groupUrl}`,
+          ? `🔑 ${meta.name}\n\n@basictrick চ্যানেল জয়েন আছে, কিন্তু বট Admin না হলে চেক হয় না।\nচ্যানেলে @basictrickbot কে Admin করে আবার License চাপুন।\n\n👉 ${groupUrl}`
+          : `🔑 ${meta.name}\n\n@basictrick is a channel. Add @basictrickbot as channel admin, then tap License again.\n\n👉 ${groupUrl}`,
       reply_markup: {
         inline_keyboard: [
           [{ text: "⚡ Open @basictrick", url: groupUrl }],
